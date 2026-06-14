@@ -1,3 +1,4 @@
+import API_BASE from '../config';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -162,7 +163,7 @@ function ReportsPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/distributors');
+       const response = await fetch(`${API_BASE}/api/distributors`);
         const data = await response.json();
         const list = Array.isArray(data) ? data
           : (Array.isArray(data.data) ? data.data : []);

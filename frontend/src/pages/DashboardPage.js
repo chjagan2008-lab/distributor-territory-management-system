@@ -1,3 +1,4 @@
+import API_BASE from '../config';
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -137,7 +138,7 @@ function DashboardPage() {
   useEffect(() => {
     const fetchDistributors = async () => {
       try {
-        const response = await fetch("http://localhost:5000/api/distributors");
+        const response = await fetch(`${API_BASE}/api/distributors`);
         if (!response.ok) throw new Error("Failed to fetch data from server");
         const data = await response.json();
         const list = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);

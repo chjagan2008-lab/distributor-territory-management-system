@@ -1,3 +1,4 @@
+import API_BASE from '../config';
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -201,7 +202,7 @@ function DetailPage() {
   useEffect(() => {
     const fetchDistributor = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/distributors');
+        const response = await fetch(`${API_BASE}/api/distributors`);
         const data = await response.json();
         const list = Array.isArray(data) ? data : (data.data || []);
         const found = list.find(d => d.id === parseInt(id));
