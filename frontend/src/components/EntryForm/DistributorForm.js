@@ -1,4 +1,4 @@
-import API_BASE from '../config';
+import API_BASE from '../../config';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, AlertCircle, Loader, Plus } from 'lucide-react';
