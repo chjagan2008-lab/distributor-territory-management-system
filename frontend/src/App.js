@@ -1,24 +1,33 @@
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Sidebar from './components/Layout/Sidebar';
+import FormPage from './pages/FormPage';
+import DashboardPage from './pages/DashboardPage';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <BrowserRouter>
+      {/* 
+        This is the main layout:
+        - Sidebar on the LEFT (fixed, always visible)
+        - Page content on the RIGHT (changes based on URL)
+      */}
+      <div className="flex h-screen bg-gray-50">
+        
+        {/* LEFT: Sidebar navigation */}
+        <Sidebar />
+        
+        {/* RIGHT: Main content area */}
+        <main className="flex-1 overflow-y-auto">
+          <Routes>
+            {/* / → redirect to /dashboard automatically */}
+            <Route path="/" element={<Navigate to="/dashboard" />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/add-distributor" element={<FormPage />} />
+          </Routes>
+        </main>
+
+      </div>
+    </BrowserRouter>
   );
 }
 

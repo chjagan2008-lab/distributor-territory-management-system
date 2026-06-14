@@ -5,6 +5,30 @@
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
+    <script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          'arvi-green': {
+            50:  '#E8F5E9',
+            100: '#C8E6C9',
+            500: '#388E3C',
+            700: '#2E7D32',
+            800: '#1B5E20',
+            900: '#1B5E20',
+          },
+          'arvi-amber': {
+            400: '#FFCA28',
+            500: '#F9A825',
+            600: '#F57F17',
+          }
+        }
+      }
+    }
+  }
+</script>
     <meta
       name="description"
       content="Web site created using create-react-app"
