@@ -1,10 +1,9 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
 
 function DistributorForm() {
 
-  // formData holds all the input values
-  // Each key matches exactly the database column name
   const [formData, setFormData] = useState({
     distributor_name: '',
     territory: '',
@@ -15,40 +14,30 @@ function DistributorForm() {
     status: 'active'
   });
 
-  // These control what message to show after submit
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  // This runs every time user types in ANY input field
-  // 'name' comes from the input's name attribute
-  // 'value' is what the user typed
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
-      ...prev,      // keep all existing values
-      [name]: value // update only the changed field
+      ...prev,
+      [name]: value
     }));
   };
 
-  // This runs when user clicks Submit
   const handleSubmit = async (e) => {
-    e.preventDefault(); // prevent page reload (default form behavior)
-
-    setLoading(true);  // show spinner
-    setError('');      // clear old errors
-    setSuccess(false); // clear old success
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess(false);
 
     try {
-      // Send POST request to our backend API
       const response = await fetch('http://localhost:5000/api/distributors', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json' // tell server we're sending JSON
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          // Convert string inputs to numbers where needed
           monthly_offtake: parseInt(formData.monthly_offtake),
           new_outlet_additions: parseInt(formData.new_outlet_additions) || 0,
           coverage_metrics: parseFloat(formData.coverage_metrics) || 0,
@@ -59,8 +48,7 @@ function DistributorForm() {
       const data = await response.json();
 
       if (data.success) {
-        setSuccess(true); // show success message
-        // Reset form to empty
+        setSuccess(true);
         setFormData({
           distributor_name: '',
           territory: '',
@@ -73,43 +61,55 @@ function DistributorForm() {
       } else {
         setError(data.message || 'Something went wrong');
       }
-
     } catch (err) {
       setError('Cannot connect to server. Is the backend running?');
     } finally {
-      setLoading(false); // hide spinner always
+      setLoading(false);
     }
   };
 
   return (
     <div className="max-w-2xl mx-auto">
 
-      {/* Success message */}
+      {/* Success message — pops in from top */}
       {success && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+        <motion.div
+          className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
           <CheckCircle className="w-5 h-5 text-green-600" />
           <p className="text-green-700 font-medium">
             Distributor added successfully!
           </p>
-        </div>
+        </motion.div>
       )}
 
-      {/* Error message */}
+      {/* Error message — pops in from top */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+        <motion.div
+          className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
           <AlertCircle className="w-5 h-5 text-red-600" />
           <p className="text-red-700 font-medium">{error}</p>
-        </div>
+        </motion.div>
       )}
 
-      {/* The Form Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-
+      {/* Form card — slides in from right */}
+      <motion.div
+        className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8"
+        initial={{ opacity: 0, x: 40 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.4 }}
+      >
         <form onSubmit={handleSubmit}>
 
           {/* Row 1: Name + Territory */}
           <div className="grid grid-cols-2 gap-6 mb-6">
-
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Distributor Name *
@@ -124,7 +124,6 @@ function DistributorForm() {
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               />
             </div>
-
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Territory *
@@ -139,12 +138,10 @@ function DistributorForm() {
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               />
             </div>
-
           </div>
 
           {/* Row 2: Offtake + New Outlets */}
           <div className="grid grid-cols-2 gap-6 mb-6">
-
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Monthly Offtake (units) *
@@ -160,7 +157,6 @@ function DistributorForm() {
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               />
             </div>
-
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 New Outlet Additions
@@ -175,12 +171,10 @@ function DistributorForm() {
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               />
             </div>
-
           </div>
 
           {/* Row 3: Coverage + Ranking */}
           <div className="grid grid-cols-2 gap-6 mb-6">
-
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Coverage Metrics (%)
@@ -197,7 +191,6 @@ function DistributorForm() {
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               />
             </div>
-
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Performance Ranking
@@ -212,10 +205,9 @@ function DistributorForm() {
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               />
             </div>
-
           </div>
 
-          {/* Row 4: Status dropdown */}
+          {/* Row 4: Status */}
           <div className="mb-8">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Status
@@ -249,7 +241,8 @@ function DistributorForm() {
           </button>
 
         </form>
-      </div>
+      </motion.div>
+
     </div>
   );
 }
