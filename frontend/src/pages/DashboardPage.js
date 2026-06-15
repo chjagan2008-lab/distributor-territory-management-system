@@ -117,7 +117,10 @@ function DashboardPage() {
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // ── NEW: Sort state ───────────────────────────────────────
+  // ── Search state ──────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // ── Sort state ────────────────────────────────────────────
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
 
@@ -152,7 +155,7 @@ function DashboardPage() {
   const lowOfftakeCount = distributors.filter(
     d => (d.monthly_offtake || 0) < 300).length;
 
-  // ── NEW: Sort handler ─────────────────────────────────────
+  // ── Sort handler ──────────────────────────────────────────
   const handleSort = (field) => {
     if (sortField === field) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -162,9 +165,17 @@ function DashboardPage() {
     }
   };
 
-  // ── NEW: Filter + Sort combined ───────────────────────────
+  // ── Filter + Search + Sort combined ───────────────────────
   const filteredDistributors = distributors
     .filter(d => statusFilter === 'all' ? true : d.status === statusFilter)
+    .filter(d => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        d.distributor_name.toLowerCase().includes(q) ||
+        d.territory.toLowerCase().includes(q)
+      );
+    })
     .sort((a, b) => {
       if (!sortField) return 0;
       let aVal = a[sortField] ?? '';
@@ -366,7 +377,7 @@ function DashboardPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.5 }}
       >
-        {/* Table header + Filter buttons */}
+        {/* Table header + Search + Filter */}
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <h3 className="text-lg font-semibold text-gray-700">
             All Distributors
@@ -374,34 +385,85 @@ function DashboardPage() {
               (click a row to see details)
             </span>
           </h3>
-          <div className="flex gap-2">
-            {['all', 'active', 'inactive', 'pending'].map(filter => (
-              <button key={filter} onClick={() => setStatusFilter(filter)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold
-                            transition-all duration-200 capitalize ${
-                  statusFilter === filter
-                    ? filter === 'all' ? 'bg-green-800 text-white'
-                      : filter === 'active' ? 'bg-green-100 text-green-800'
-                      : filter === 'inactive' ? 'bg-red-100 text-red-700'
-                      : 'bg-yellow-100 text-yellow-700'
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                }`}
-              >
-                {filter === 'all'
-                  ? `All (${distributors.length})`
-                  : `${filter} (${distributors.filter(
-                      d => d.status === filter).length})`}
-              </button>
-            ))}
+
+          <div className="flex items-center gap-3 flex-wrap">
+
+            {/* ── Search Box ─────────────────────────── */}
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2
+                               text-gray-400 text-sm">🔍</span>
+              <input
+                type="text"
+                placeholder="Search name or territory..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 pr-8 py-2 border border-gray-200 rounded-xl
+                           text-sm focus:outline-none focus:ring-2
+                           focus:ring-green-400 focus:border-green-400
+                           transition-all w-56"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2
+                             text-gray-400 hover:text-gray-600 text-xs
+                             font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* ── Filter Buttons ─────────────────────── */}
+            <div className="flex gap-2">
+              {['all', 'active', 'inactive', 'pending'].map(filter => (
+                <button key={filter} onClick={() => setStatusFilter(filter)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold
+                              transition-all duration-200 capitalize ${
+                    statusFilter === filter
+                      ? filter === 'all' ? 'bg-green-800 text-white'
+                        : filter === 'active' ? 'bg-green-100 text-green-800'
+                        : filter === 'inactive' ? 'bg-red-100 text-red-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {filter === 'all'
+                    ? `All (${distributors.length})`
+                    : `${filter} (${distributors.filter(
+                        d => d.status === filter).length})`}
+                </button>
+              ))}
+            </div>
+
           </div>
         </div>
+
+        {/* Search result hint */}
+        {searchQuery && (
+          <p className="text-xs text-gray-400 mb-3">
+            Showing results for{' '}
+            <span className="text-green-700 font-medium">
+              "{searchQuery}"
+            </span>
+            {' '}— {filteredDistributors.length} found
+            <button
+              onClick={() => setSearchQuery('')}
+              className="ml-2 text-red-400 hover:text-red-600 underline"
+            >
+              clear
+            </button>
+          </p>
+        )}
 
         {/* Sort hint */}
         {sortField && (
           <p className="text-xs text-gray-400 mb-3">
-            Sorted by <span className="text-green-700 font-medium">
-            {sortField.replace('_', ' ')}</span> —
-            {sortOrder === 'asc' ? ' low to high ↑' : ' high to low ↓'}
+            Sorted by{' '}
+            <span className="text-green-700 font-medium">
+              {sortField.replace('_', ' ')}
+            </span>{' '}
+            — {sortOrder === 'asc' ? 'low to high ↑' : 'high to low ↓'}
             <button onClick={() => setSortField(null)}
               className="ml-2 text-red-400 hover:text-red-600 underline">
               clear sort
@@ -409,15 +471,24 @@ function DashboardPage() {
           </p>
         )}
 
+        {/* Empty state */}
         {filteredDistributors.length === 0 ? (
-          <div className="h-48 bg-gray-50 rounded-xl flex items-center justify-center">
+          <div className="h-48 bg-gray-50 rounded-xl flex items-center
+                          justify-center">
             <div className="text-center">
               <p className="text-gray-400 text-lg">
-                No {statusFilter} distributors found
+                {searchQuery
+                  ? `No results for "${searchQuery}"`
+                  : `No ${statusFilter} distributors found`}
               </p>
-              <button onClick={() => setStatusFilter('all')}
-                className="mt-2 text-green-600 text-sm hover:underline">
-                Show all distributors
+              <button
+                onClick={() => {
+                  setStatusFilter('all');
+                  setSearchQuery('');
+                }}
+                className="mt-2 text-green-600 text-sm hover:underline"
+              >
+                Clear all filters
               </button>
             </div>
           </div>
@@ -429,8 +500,6 @@ function DashboardPage() {
                   <th className="text-left text-gray-500 font-medium pb-3 pr-4">
                     #
                   </th>
-
-                  {/* ── Sortable column headers ─────────── */}
                   {[
                     { label: 'Name',     field: 'distributor_name' },
                     { label: 'Territory', field: 'territory' },
@@ -456,7 +525,6 @@ function DashboardPage() {
                       </span>
                     </th>
                   ))}
-
                   <th className="text-left text-gray-500 font-medium pb-3 pr-4">
                     Status
                   </th>
