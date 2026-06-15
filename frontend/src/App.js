@@ -5,6 +5,7 @@ import FormPage from './pages/FormPage';
 import DashboardPage from './pages/DashboardPage';
 import DetailPage from './pages/DetailPage';
 import ReportsPage from './pages/ReportsPage';
+import EditPage from './pages/EditPage';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/add-distributor" element={<FormPage />} />
               <Route path="/distributor/:id" element={<DetailPage />} />
+              <Route path="/distributor/:id/edit" element={<EditPage />} />
               <Route path="/reports" element={<ReportsPage />} />
             </Routes>
           </AnimatePresence>
