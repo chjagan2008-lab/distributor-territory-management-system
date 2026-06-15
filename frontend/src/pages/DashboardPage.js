@@ -16,7 +16,6 @@ function useCountUp(target, duration = 1500) {
   useEffect(() => {
     if (target === 0) return;
     if (frameRef.current) cancelAnimationFrame(frameRef.current);
-
     const animate = (timestamp) => {
       if (!startTime.current) startTime.current = timestamp;
       const progress = Math.min((timestamp - startTime.current) / duration, 1);
@@ -28,7 +27,6 @@ function useCountUp(target, duration = 1500) {
         setCount(target);
       }
     };
-
     startTime.current = null;
     frameRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frameRef.current);
@@ -69,7 +67,6 @@ function SkeletonTable() {
 
 function StatCard({ label, value, suffix = "", color, icon, delay }) {
   const animatedValue = useCountUp(value);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -88,7 +85,6 @@ function StatCard({ label, value, suffix = "", color, icon, delay }) {
     >
       <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
         style={{ background: color }} />
-
       <div className="flex items-start justify-between mb-3 mt-1">
         <p className="text-gray-500 text-sm font-medium">{label}</p>
         <span className="text-lg font-bold p-2 rounded-xl"
@@ -96,11 +92,9 @@ function StatCard({ label, value, suffix = "", color, icon, delay }) {
           {icon}
         </span>
       </div>
-
       <p className="text-4xl font-bold mt-1" style={{ color }}>
         {animatedValue.toLocaleString()}{suffix}
       </p>
-
       <div className="mt-4 h-1 rounded-full opacity-20"
         style={{ background: color }} />
     </motion.div>
@@ -109,10 +103,7 @@ function StatCard({ label, value, suffix = "", color, icon, delay }) {
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.12 },
-  },
+  visible: { opacity: 1, transition: { staggerChildren: 0.12 } },
 };
 
 const itemVariants = {
@@ -124,10 +115,11 @@ function DashboardPage() {
   const [distributors, setDistributors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  // ── NEW: Filter state ─────────────────────────────────────
-  // 'all' shows everyone, 'active'/'inactive'/'pending' filters
   const [statusFilter, setStatusFilter] = useState('all');
+
+  // ── NEW: Sort state ───────────────────────────────────────
+  const [sortField, setSortField] = useState(null);
+  const [sortOrder, setSortOrder] = useState('asc');
 
   const navigate = useNavigate();
 
@@ -155,16 +147,34 @@ function DashboardPage() {
   const activeCount = distributors.filter(
     (d) => d.status === "active").length;
 
-  // ── NEW: Alert counts ─────────────────────────────────────
   const lowCoverageCount = distributors.filter(
     d => (parseFloat(d.coverage_metrics) || 0) < 70).length;
   const lowOfftakeCount = distributors.filter(
     d => (d.monthly_offtake || 0) < 300).length;
 
-  // ── NEW: Filtered list for table ──────────────────────────
-  const filteredDistributors = distributors.filter(d =>
-    statusFilter === 'all' ? true : d.status === statusFilter
-  );
+  // ── NEW: Sort handler ─────────────────────────────────────
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  // ── NEW: Filter + Sort combined ───────────────────────────
+  const filteredDistributors = distributors
+    .filter(d => statusFilter === 'all' ? true : d.status === statusFilter)
+    .sort((a, b) => {
+      if (!sortField) return 0;
+      let aVal = a[sortField] ?? '';
+      let bVal = b[sortField] ?? '';
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   const barData = distributors.map(d => ({
     name: d.distributor_name.split(' ')[0],
@@ -223,8 +233,7 @@ function DashboardPage() {
       style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #fafafa 60%)" }}>
 
       {/* Page Header */}
-      <motion.div
-        className="mb-8"
+      <motion.div className="mb-8"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -235,11 +244,9 @@ function DashboardPage() {
         </p>
       </motion.div>
 
-      {/* ── NEW: Alert Banners ─────────────────────────────── */}
-      {/* Only shows if there are alerts */}
+      {/* Alert Banners */}
       {(lowCoverageCount > 0 || lowOfftakeCount > 0) && (
-        <motion.div
-          className="mb-6 grid gap-3"
+        <motion.div className="mb-6 grid gap-3"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
@@ -263,7 +270,6 @@ function DashboardPage() {
               </span>
             </div>
           )}
-
           {lowOfftakeCount > 0 && (
             <div className="flex items-center gap-3 p-4 rounded-xl
                             bg-yellow-50 border border-yellow-200">
@@ -298,12 +304,8 @@ function DashboardPage() {
 
       {/* Charts Row */}
       {distributors.length > 0 && (
-        <motion.div
-          className="grid grid-cols-2 gap-6 mb-8"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
+        <motion.div className="grid grid-cols-2 gap-6 mb-8"
+          variants={containerVariants} initial="hidden" animate="visible">
           <motion.div variants={itemVariants} whileHover={{ scale: 1.01 }}
             className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <h3 className="text-lg font-semibold text-gray-700 mb-4">
@@ -316,13 +318,11 @@ function DashboardPage() {
                 <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} />
                 <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
                 <Tooltip contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
+                  backgroundColor: 'white', border: '1px solid #e5e7eb',
                   borderRadius: '12px', fontSize: '13px',
                 }} />
-                <Bar dataKey="offtake" fill="#1B5E20"
-                  radius={[6, 6, 0, 0]} name="Monthly Offtake"
-                  isAnimationActive={true} animationDuration={1200} />
+                <Bar dataKey="offtake" fill="#1B5E20" radius={[6, 6, 0, 0]}
+                  name="Monthly Offtake" isAnimationActive animationDuration={1200} />
               </BarChart>
             </ResponsiveContainer>
           </motion.div>
@@ -337,15 +337,14 @@ function DashboardPage() {
                 <Pie data={pieData} cx="50%" cy="50%"
                   innerRadius={60} outerRadius={90}
                   paddingAngle={4} dataKey="value"
-                  isAnimationActive={true} animationDuration={1200}>
+                  isAnimationActive animationDuration={1200}>
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`}
                       fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip contentStyle={{
-                  backgroundColor: 'white',
-                  border: '1px solid #e5e7eb',
+                  backgroundColor: 'white', border: '1px solid #e5e7eb',
                   borderRadius: '12px', fontSize: '13px',
                 }} />
                 <Legend iconType="circle" iconSize={8}
@@ -375,22 +374,15 @@ function DashboardPage() {
               (click a row to see details)
             </span>
           </h3>
-
-          {/* ── NEW: Filter Buttons ───────────────────────── */}
           <div className="flex gap-2">
             {['all', 'active', 'inactive', 'pending'].map(filter => (
-              <button
-                key={filter}
-                onClick={() => setStatusFilter(filter)}
+              <button key={filter} onClick={() => setStatusFilter(filter)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold
                             transition-all duration-200 capitalize ${
                   statusFilter === filter
-                    ? filter === 'all'
-                      ? 'bg-green-800 text-white'
-                      : filter === 'active'
-                      ? 'bg-green-100 text-green-800'
-                      : filter === 'inactive'
-                      ? 'bg-red-100 text-red-700'
+                    ? filter === 'all' ? 'bg-green-800 text-white'
+                      : filter === 'active' ? 'bg-green-100 text-green-800'
+                      : filter === 'inactive' ? 'bg-red-100 text-red-700'
                       : 'bg-yellow-100 text-yellow-700'
                     : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 }`}
@@ -398,25 +390,33 @@ function DashboardPage() {
                 {filter === 'all'
                   ? `All (${distributors.length})`
                   : `${filter} (${distributors.filter(
-                      d => d.status === filter).length})`
-                }
+                      d => d.status === filter).length})`}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Empty state */}
+        {/* Sort hint */}
+        {sortField && (
+          <p className="text-xs text-gray-400 mb-3">
+            Sorted by <span className="text-green-700 font-medium">
+            {sortField.replace('_', ' ')}</span> —
+            {sortOrder === 'asc' ? ' low to high ↑' : ' high to low ↓'}
+            <button onClick={() => setSortField(null)}
+              className="ml-2 text-red-400 hover:text-red-600 underline">
+              clear sort
+            </button>
+          </p>
+        )}
+
         {filteredDistributors.length === 0 ? (
-          <div className="h-48 bg-gray-50 rounded-xl flex items-center
-                          justify-center">
+          <div className="h-48 bg-gray-50 rounded-xl flex items-center justify-center">
             <div className="text-center">
               <p className="text-gray-400 text-lg">
                 No {statusFilter} distributors found
               </p>
-              <button
-                onClick={() => setStatusFilter('all')}
-                className="mt-2 text-green-600 text-sm hover:underline"
-              >
+              <button onClick={() => setStatusFilter('all')}
+                className="mt-2 text-green-600 text-sm hover:underline">
                 Show all distributors
               </button>
             </div>
@@ -426,14 +426,40 @@ function DashboardPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left text-gray-500 font-medium pb-3 pr-4">#</th>
-                  <th className="text-left text-gray-500 font-medium pb-3 pr-4">Name</th>
-                  <th className="text-left text-gray-500 font-medium pb-3 pr-4">Territory</th>
-                  <th className="text-left text-gray-500 font-medium pb-3 pr-4">Offtake</th>
-                  <th className="text-left text-gray-500 font-medium pb-3 pr-4">Outlets</th>
-                  <th className="text-left text-gray-500 font-medium pb-3 pr-4">Coverage</th>
-                  <th className="text-left text-gray-500 font-medium pb-3 pr-4">Status</th>
-                  {/* ── NEW: Alerts column ──────────────── */}
+                  <th className="text-left text-gray-500 font-medium pb-3 pr-4">
+                    #
+                  </th>
+
+                  {/* ── Sortable column headers ─────────── */}
+                  {[
+                    { label: 'Name',     field: 'distributor_name' },
+                    { label: 'Territory', field: 'territory' },
+                    { label: 'Offtake',  field: 'monthly_offtake' },
+                    { label: 'Outlets',  field: 'new_outlet_additions' },
+                    { label: 'Coverage', field: 'coverage_metrics' },
+                  ].map(col => (
+                    <th key={col.field}
+                      onClick={() => handleSort(col.field)}
+                      className="text-left text-gray-500 font-medium pb-3 pr-4
+                                 cursor-pointer hover:text-green-800
+                                 select-none transition-colors duration-150"
+                    >
+                      <span className="flex items-center gap-1">
+                        {col.label}
+                        {sortField === col.field ? (
+                          <span className="text-green-700 font-bold">
+                            {sortOrder === 'asc' ? '↑' : '↓'}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300">↕</span>
+                        )}
+                      </span>
+                    </th>
+                  ))}
+
+                  <th className="text-left text-gray-500 font-medium pb-3 pr-4">
+                    Status
+                  </th>
                   <th className="text-left text-gray-500 font-medium pb-3">
                     Alerts
                   </th>
@@ -480,14 +506,11 @@ function DashboardPage() {
                         {d.status}
                       </span>
                     </td>
-
-                    {/* ── NEW: Alert badges per row ──────── */}
                     <td className="py-3">
                       <div className="flex gap-1 flex-wrap">
                         {(parseFloat(d.coverage_metrics) || 0) < 70 && (
-                          <span className="px-2 py-0.5 bg-red-100
-                                           text-red-600 rounded-full
-                                           text-xs font-medium">
+                          <span className="px-2 py-0.5 bg-red-100 text-red-600
+                                           rounded-full text-xs font-medium">
                             ⚠️ Low Coverage
                           </span>
                         )}
@@ -515,7 +538,6 @@ function DashboardPage() {
           </div>
         )}
       </motion.div>
-
     </div>
   );
 }
