@@ -1,11 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const { createDistributor, getAllDistributors } = require('../controllers/distributorController');
+const {
+  createDistributor,
+  getAllDistributors,
+  updateDistributor,
+  deleteDistributor
+} = require('../controllers/distributorController');
 
-// POST /api/distributors - Create new record
+// GET all distributors
+router.get('/', getAllDistributors);
+
+// POST create new distributor
 router.post('/', createDistributor);
 
-// GET /api/distributors - Get all records
-router.get('/', getAllDistributors);
+// PUT update distributor by id
+router.put('/:id', updateDistributor);
+
+// DELETE distributor by id
+router.delete('/:id', deleteDistributor);
 
 module.exports = router;
