@@ -3,15 +3,19 @@ const cors = require('cors');
 require('dotenv').config();
 const pool = require('./db');
 const distributorRoutes = require('./routes/distributorRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use('/api/distributors', distributorRoutes);
 
-// Test route
+// Routes
+app.use('/api/distributors', distributorRoutes);
+app.use('/api/auth', authRoutes);
+
+// Health check route
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', project: 'distributor-territory-management' });
 });
