@@ -116,13 +116,13 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
-
-  // ── Search state ──────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
-
-  // ── Sort state ────────────────────────────────────────────
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState('asc');
+
+  // ── Pagination state ──────────────────────────────────────
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10; // Change back to 10!
 
   const navigate = useNavigate();
 
@@ -144,6 +144,11 @@ function DashboardPage() {
     fetchDistributors();
   }, []);
 
+  // ── Reset to page 1 when filter/search changes ────────────
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, searchQuery]);
+
   const totalDistributors = distributors.length;
   const totalOfftake = distributors.reduce(
     (sum, d) => sum + (d.monthly_offtake || 0), 0);
@@ -155,7 +160,6 @@ function DashboardPage() {
   const lowOfftakeCount = distributors.filter(
     d => (d.monthly_offtake || 0) < 300).length;
 
-  // ── Sort handler ──────────────────────────────────────────
   const handleSort = (field) => {
     if (sortField === field) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -165,7 +169,7 @@ function DashboardPage() {
     }
   };
 
-  // ── Filter + Search + Sort combined ───────────────────────
+  // ── Filter + Search + Sort ────────────────────────────────
   const filteredDistributors = distributors
     .filter(d => statusFilter === 'all' ? true : d.status === statusFilter)
     .filter(d => {
@@ -186,6 +190,13 @@ function DashboardPage() {
       if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
+
+  // ── Pagination calculations ───────────────────────────────
+  const totalPages = Math.ceil(filteredDistributors.length / ITEMS_PER_PAGE);
+  const paginatedDistributors = filteredDistributors.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const barData = distributors.map(d => ({
     name: d.distributor_name.split(' ')[0],
@@ -333,7 +344,8 @@ function DashboardPage() {
                   borderRadius: '12px', fontSize: '13px',
                 }} />
                 <Bar dataKey="offtake" fill="#1B5E20" radius={[6, 6, 0, 0]}
-                  name="Monthly Offtake" isAnimationActive animationDuration={1200} />
+                  name="Monthly Offtake" isAnimationActive
+                  animationDuration={1200} />
               </BarChart>
             </ResponsiveContainer>
           </motion.div>
@@ -387,8 +399,7 @@ function DashboardPage() {
           </h3>
 
           <div className="flex items-center gap-3 flex-wrap">
-
-            {/* ── Search Box ─────────────────────────── */}
+            {/* Search Box */}
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2
                                text-gray-400 text-sm">🔍</span>
@@ -406,15 +417,14 @@ function DashboardPage() {
                 <button
                   onClick={() => setSearchQuery('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2
-                             text-gray-400 hover:text-gray-600 text-xs
-                             font-bold"
+                             text-gray-400 hover:text-gray-600 text-xs font-bold"
                 >
                   ✕
                 </button>
               )}
             </div>
 
-            {/* ── Filter Buttons ─────────────────────── */}
+            {/* Filter Buttons */}
             <div className="flex gap-2">
               {['all', 'active', 'inactive', 'pending'].map(filter => (
                 <button key={filter} onClick={() => setStatusFilter(filter)}
@@ -435,22 +445,17 @@ function DashboardPage() {
                 </button>
               ))}
             </div>
-
           </div>
         </div>
 
-        {/* Search result hint */}
+        {/* Search hint */}
         {searchQuery && (
           <p className="text-xs text-gray-400 mb-3">
             Showing results for{' '}
-            <span className="text-green-700 font-medium">
-              "{searchQuery}"
-            </span>
+            <span className="text-green-700 font-medium">"{searchQuery}"</span>
             {' '}— {filteredDistributors.length} found
-            <button
-              onClick={() => setSearchQuery('')}
-              className="ml-2 text-red-400 hover:text-red-600 underline"
-            >
+            <button onClick={() => setSearchQuery('')}
+              className="ml-2 text-red-400 hover:text-red-600 underline">
               clear
             </button>
           </p>
@@ -482,10 +487,7 @@ function DashboardPage() {
                   : `No ${statusFilter} distributors found`}
               </p>
               <button
-                onClick={() => {
-                  setStatusFilter('all');
-                  setSearchQuery('');
-                }}
+                onClick={() => { setStatusFilter('all'); setSearchQuery(''); }}
                 className="mt-2 text-green-600 text-sm hover:underline"
               >
                 Clear all filters
@@ -493,117 +495,204 @@ function DashboardPage() {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left text-gray-500 font-medium pb-3 pr-4">
-                    #
-                  </th>
-                  {[
-                    { label: 'Name',     field: 'distributor_name' },
-                    { label: 'Territory', field: 'territory' },
-                    { label: 'Offtake',  field: 'monthly_offtake' },
-                    { label: 'Outlets',  field: 'new_outlet_additions' },
-                    { label: 'Coverage', field: 'coverage_metrics' },
-                  ].map(col => (
-                    <th key={col.field}
-                      onClick={() => handleSort(col.field)}
-                      className="text-left text-gray-500 font-medium pb-3 pr-4
-                                 cursor-pointer hover:text-green-800
-                                 select-none transition-colors duration-150"
-                    >
-                      <span className="flex items-center gap-1">
-                        {col.label}
-                        {sortField === col.field ? (
-                          <span className="text-green-700 font-bold">
-                            {sortOrder === 'asc' ? '↑' : '↓'}
-                          </span>
-                        ) : (
-                          <span className="text-gray-300">↕</span>
-                        )}
-                      </span>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left text-gray-500 font-medium pb-3 pr-4">
+                      #
                     </th>
+                    {[
+                      { label: 'Name',      field: 'distributor_name' },
+                      { label: 'Territory', field: 'territory' },
+                      { label: 'Offtake',   field: 'monthly_offtake' },
+                      { label: 'Outlets',   field: 'new_outlet_additions' },
+                      { label: 'Coverage',  field: 'coverage_metrics' },
+                    ].map(col => (
+                      <th key={col.field}
+                        onClick={() => handleSort(col.field)}
+                        className="text-left text-gray-500 font-medium pb-3 pr-4
+                                   cursor-pointer hover:text-green-800
+                                   select-none transition-colors duration-150"
+                      >
+                        <span className="flex items-center gap-1">
+                          {col.label}
+                          {sortField === col.field ? (
+                            <span className="text-green-700 font-bold">
+                              {sortOrder === 'asc' ? '↑' : '↓'}
+                            </span>
+                          ) : (
+                            <span className="text-gray-300">↕</span>
+                          )}
+                        </span>
+                      </th>
+                    ))}
+                    <th className="text-left text-gray-500 font-medium pb-3 pr-4">
+                      Status
+                    </th>
+                    <th className="text-left text-gray-500 font-medium pb-3">
+                      Alerts
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* ── Use paginatedDistributors not filteredDistributors ── */}
+                  {paginatedDistributors.map((d, index) => (
+                    <motion.tr
+                      key={d.id}
+                      onClick={() => navigate(`/distributor/${d.id}`)}
+                      className="border-b border-gray-50 cursor-pointer group"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
+                      whileHover={{ backgroundColor: "#f0fdf4" }}
+                      style={{ position: "relative" }}
+                    >
+                      {/* Row number shows GLOBAL index not page index */}
+                      <td className="py-3 pr-4 text-gray-400">
+                        {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
+                      </td>
+                      <td className="py-3 pr-4">
+                        <span className="font-medium text-green-800
+                                         group-hover:underline">
+                          {d.distributor_name}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-gray-600">{d.territory}</td>
+                      <td className="py-3 pr-4 text-gray-600">
+                        {d.monthly_offtake?.toLocaleString()}
+                      </td>
+                      <td className="py-3 pr-4 text-gray-600">
+                        {d.new_outlet_additions ?? 0}
+                      </td>
+                      <td className="py-3 pr-4 text-gray-600">
+                        {d.coverage_metrics ?? 0}%
+                      </td>
+                      <td className="py-3 pr-4">
+                        <span className={`px-2 py-1 rounded-full text-xs
+                                          font-medium ${
+                          d.status === "active"
+                            ? "bg-green-100 text-green-700"
+                            : d.status === "inactive"
+                            ? "bg-red-100 text-red-600"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}>
+                          {d.status}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        <div className="flex gap-1 flex-wrap">
+                          {(parseFloat(d.coverage_metrics) || 0) < 70 && (
+                            <span className="px-2 py-0.5 bg-red-100 text-red-600
+                                             rounded-full text-xs font-medium">
+                              ⚠️ Low Coverage
+                            </span>
+                          )}
+                          {(d.monthly_offtake || 0) < 300 && (
+                            <span className="px-2 py-0.5 bg-yellow-100
+                                             text-yellow-700 rounded-full
+                                             text-xs font-medium">
+                              📉 Low Offtake
+                            </span>
+                          )}
+                          {(parseFloat(d.coverage_metrics) || 0) >= 70 &&
+                           (d.monthly_offtake || 0) >= 300 && (
+                            <span className="px-2 py-0.5 bg-green-100
+                                             text-green-600 rounded-full
+                                             text-xs font-medium">
+                              ✅ Good
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </motion.tr>
                   ))}
-                  <th className="text-left text-gray-500 font-medium pb-3 pr-4">
-                    Status
-                  </th>
-                  <th className="text-left text-gray-500 font-medium pb-3">
-                    Alerts
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredDistributors.map((d, index) => (
-                  <motion.tr
-                    key={d.id}
-                    onClick={() => navigate(`/distributor/${d.id}`)}
-                    className="border-b border-gray-50 cursor-pointer group"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.3, delay: 0.6 + index * 0.07 }}
-                    whileHover={{ backgroundColor: "#f0fdf4" }}
-                    style={{ position: "relative" }}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── Pagination Controls ───────────────────────── */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6
+                              pt-4 border-t border-gray-100">
+
+                {/* Record count info */}
+                <p className="text-xs text-gray-400">
+                  Showing{' '}
+                  <span className="font-medium text-gray-600">
+                    {((currentPage - 1) * ITEMS_PER_PAGE) + 1}
+                  </span>
+                  {' '}to{' '}
+                  <span className="font-medium text-gray-600">
+                    {Math.min(
+                      currentPage * ITEMS_PER_PAGE,
+                      filteredDistributors.length
+                    )}
+                  </span>
+                  {' '}of{' '}
+                  <span className="font-medium text-gray-600">
+                    {filteredDistributors.length}
+                  </span>
+                  {' '}records
+                </p>
+
+                {/* Page buttons */}
+                <div className="flex items-center gap-2">
+
+                  {/* Previous */}
+                  <motion.button
+                    onClick={() => setCurrentPage(prev => prev - 1)}
+                    disabled={currentPage === 1}
+                    whileHover={{ scale: currentPage === 1 ? 1 : 1.05 }}
+                    whileTap={{ scale: currentPage === 1 ? 1 : 0.95 }}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold
+                               border border-gray-200 transition-all
+                               disabled:opacity-40 disabled:cursor-not-allowed
+                               hover:bg-green-50 hover:border-green-300
+                               hover:text-green-800"
                   >
-                    <td className="py-3 pr-4 text-gray-400">{index + 1}</td>
-                    <td className="py-3 pr-4">
-                      <span className="font-medium text-green-800
-                                       group-hover:underline">
-                        {d.distributor_name}
-                      </span>
-                    </td>
-                    <td className="py-3 pr-4 text-gray-600">{d.territory}</td>
-                    <td className="py-3 pr-4 text-gray-600">
-                      {d.monthly_offtake?.toLocaleString()}
-                    </td>
-                    <td className="py-3 pr-4 text-gray-600">
-                      {d.new_outlet_additions ?? 0}
-                    </td>
-                    <td className="py-3 pr-4 text-gray-600">
-                      {d.coverage_metrics ?? 0}%
-                    </td>
-                    <td className="py-3 pr-4">
-                      <span className={`px-2 py-1 rounded-full text-xs
-                                        font-medium ${
-                        d.status === "active"
-                          ? "bg-green-100 text-green-700"
-                          : d.status === "inactive"
-                          ? "bg-red-100 text-red-600"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}>
-                        {d.status}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      <div className="flex gap-1 flex-wrap">
-                        {(parseFloat(d.coverage_metrics) || 0) < 70 && (
-                          <span className="px-2 py-0.5 bg-red-100 text-red-600
-                                           rounded-full text-xs font-medium">
-                            ⚠️ Low Coverage
-                          </span>
-                        )}
-                        {(d.monthly_offtake || 0) < 300 && (
-                          <span className="px-2 py-0.5 bg-yellow-100
-                                           text-yellow-700 rounded-full
-                                           text-xs font-medium">
-                            📉 Low Offtake
-                          </span>
-                        )}
-                        {(parseFloat(d.coverage_metrics) || 0) >= 70 &&
-                         (d.monthly_offtake || 0) >= 300 && (
-                          <span className="px-2 py-0.5 bg-green-100
-                                           text-green-600 rounded-full
-                                           text-xs font-medium">
-                            ✅ Good
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    ← Previous
+                  </motion.button>
+
+                  {/* Page numbers */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .map(page => (
+                      <motion.button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`w-8 h-8 rounded-xl text-xs font-semibold
+                                    transition-all ${
+                          currentPage === page
+                            ? 'bg-green-800 text-white shadow-md'
+                            : 'border border-gray-200 text-gray-500 hover:bg-green-50 hover:border-green-300 hover:text-green-800'
+                        }`}
+                      >
+                        {page}
+                      </motion.button>
+                    ))}
+
+                  {/* Next */}
+                  <motion.button
+                    onClick={() => setCurrentPage(prev => prev + 1)}
+                    disabled={currentPage === totalPages}
+                    whileHover={{ scale: currentPage === totalPages ? 1 : 1.05 }}
+                    whileTap={{ scale: currentPage === totalPages ? 1 : 0.95 }}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold
+                               border border-gray-200 transition-all
+                               disabled:opacity-40 disabled:cursor-not-allowed
+                               hover:bg-green-50 hover:border-green-300
+                               hover:text-green-800"
+                  >
+                    Next →
+                  </motion.button>
+
+                </div>
+              </div>
+            )}
+          </>
         )}
       </motion.div>
     </div>
