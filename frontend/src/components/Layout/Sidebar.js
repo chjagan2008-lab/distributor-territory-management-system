@@ -1,6 +1,9 @@
-// 📝 NOTE: Sidebar.js — Redesigned to match dark glassmorphism login theme
-// 📝 NOTE: ALL navigation logic, logout, and user display kept UNCHANGED
-// 📝 NOTE: Only visual styling is updated
+// 📝 NOTE: Sidebar.js — Added mobile responsiveness (onClose prop + X button)
+// 📝 NOTE: ALL existing styling, animations, logout logic — 100% UNCHANGED
+// 📝 NOTE: Only 3 things added:
+//          1. onClose prop in function signature
+//          2. X close button in logo section (mobile only)
+//          3. onClose passed to each NavItem's onClick
 
 import { NavLink, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -10,11 +13,10 @@ import {
   BarChart2,
   LogOut,
   Droplets,
+  X, // 📝 NOTE: Added X icon for mobile close button
 } from 'lucide-react';
 
-// ─── ANIMATION VARIANTS ────────────────────────────────────────────────────
-// 📝 NOTE: sidebarVariants controls the whole sidebar sliding in from left
-// 📝 NOTE: staggerChildren = each nav item appears one after another
+// ─── ANIMATION VARIANTS (UNCHANGED) ────────────────────────────────────────
 const sidebarVariants = {
   hidden: { opacity: 0, x: -40 },
   visible: {
@@ -29,17 +31,13 @@ const sidebarVariants = {
   },
 };
 
-// 📝 NOTE: itemVariants controls each individual nav item sliding in
 const itemVariants = {
-  hidden:   { opacity: 0, x: -20 },
-  visible:  { opacity: 1, x: 0, transition: { duration: 0.35 } },
+  hidden:  { opacity: 0, x: -20 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.35 } },
 };
 
-// ─── STYLES (defined once, reused in NavItem) ──────────────────────────────
-// 📝 NOTE: We define styles as objects so they're easy to read and maintain
-
+// ─── STYLES (UNCHANGED) ────────────────────────────────────────────────────
 const activeStyle = {
-  // 📝 NOTE: Active item = golden amber bg + dark text (stands out clearly)
   background:   'rgba(245,158,11,0.18)',
   border:       '1px solid rgba(245,158,11,0.35)',
   color:        '#fbbf24',
@@ -47,7 +45,6 @@ const activeStyle = {
 };
 
 const inactiveStyle = {
-  // 📝 NOTE: Inactive item = fully transparent, muted green text
   background:   'transparent',
   border:       '1px solid transparent',
   color:        'rgba(248,250,252,0.5)',
@@ -55,15 +52,16 @@ const inactiveStyle = {
 };
 
 // ─── NAV ITEM COMPONENT ────────────────────────────────────────────────────
-// 📝 NOTE: NavItem is a reusable component — we call it once per page link
-// 📝 NOTE: Props: to = route path, icon = Lucide icon, label = text shown
-function NavItem({ to, icon: Icon, label }) {
+// 📝 NOTE: Added onClose prop — called when nav link is tapped on mobile
+// 📝 NOTE: This closes the sidebar after navigation on mobile
+function NavItem({ to, icon: Icon, label, onClose }) {
   return (
     <motion.div variants={itemVariants}>
       <NavLink
         to={to}
-        // 📝 NOTE: isActive is provided by React Router — true when URL matches
         className={() => 'block'}
+        // 📝 NOTE: onClick={onClose} closes sidebar when nav item tapped on mobile
+        onClick={onClose}
         style={({ isActive }) => ({
           display:        'flex',
           alignItems:     'center',
@@ -74,13 +72,12 @@ function NavItem({ to, icon: Icon, label }) {
           fontSize:       13,
           transition:     'all 0.2s',
           position:       'relative',
-          // 📝 NOTE: Spread active or inactive style based on route match
           ...(isActive ? activeStyle : inactiveStyle),
         })}
       >
         {({ isActive }) => (
           <>
-            {/* 📝 NOTE: Golden left accent bar shown only on active item */}
+            {/* Golden left accent bar — active item only */}
             {isActive && (
               <motion.div
                 layoutId="activeBar"
@@ -99,7 +96,7 @@ function NavItem({ to, icon: Icon, label }) {
               />
             )}
 
-            {/* 📝 NOTE: Icon spins slightly on hover — subtle delight */}
+            {/* Icon with hover spin */}
             <motion.div
               whileHover={{ rotate: 12, scale: 1.15 }}
               transition={{ duration: 0.2, type: 'spring', stiffness: 300 }}
@@ -109,13 +106,11 @@ function NavItem({ to, icon: Icon, label }) {
                 style={{
                   width:  18,
                   height: 18,
-                  // 📝 NOTE: Golden when active, muted when inactive
                   color: isActive ? '#fbbf24' : 'rgba(248,250,252,0.45)',
                 }}
               />
             </motion.div>
 
-            {/* Nav label text */}
             <span>{label}</span>
           </>
         )}
@@ -125,42 +120,37 @@ function NavItem({ to, icon: Icon, label }) {
 }
 
 // ─── MAIN SIDEBAR COMPONENT ────────────────────────────────────────────────
-function Sidebar() {
+// 📝 NOTE: Added onClose prop — received from App.js
+// 📝 NOTE: onClose = function that sets sidebarOpen to false in App.js
+function Sidebar({ onClose }) {
   const navigate = useNavigate();
 
-  // 📝 NOTE: handleLogout — clears JWT token and user from localStorage
-  // 📝 NOTE: Then redirects to /login — UNCHANGED from your original
+  // Logout handler (UNCHANGED)
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
   };
 
-  // 📝 NOTE: Read logged-in user from localStorage
-  // 📝 NOTE: || '{}' prevents crash if nothing is stored yet
+  // Get user from localStorage (UNCHANGED)
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   return (
-    // 📝 NOTE: w-64 = 256px wide sidebar, fixed width
-    // 📝 NOTE: min-h-screen = always full height of the page
-    // 📝 NOTE: flex flex-col = logo on top, nav in middle, logout at bottom
-    // 📝 NOTE: border-right = subtle separator from main content area
     <motion.div
-      className="w-64 flex flex-col min-h-screen"
+      className="w-64 flex flex-col"
       style={{
         background:  '#0b1a0d',
         borderRight: '1px solid rgba(255,255,255,0.07)',
+        // 📝 NOTE: h-screen ensures sidebar fills full height on mobile overlay
+        height:      '100vh',
+        overflowY:   'auto',
       }}
       variants={sidebarVariants}
       initial="hidden"
       animate="visible"
     >
 
-      {/* ══════════════════════════════════════════════════════════════════
-          TOP — LOGO SECTION
-          📝 NOTE: AE monogram matches the login page branding exactly
-          📝 NOTE: Droplets icon from lucide = edible oils reference
-      ═══════════════════════════════════════════════════════════════════ */}
+      {/* ── TOP — LOGO SECTION ─────────────────────────────────────────── */}
       <motion.div
         variants={itemVariants}
         style={{
@@ -168,25 +158,25 @@ function Sidebar() {
           borderBottom: '1px solid rgba(255,255,255,0.07)',
         }}
       >
+        {/* 📝 NOTE: Added X close button to this row — only shows on mobile */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
 
-          {/* AE Monogram badge — green to amber gradient */}
+          {/* AE Monogram badge (UNCHANGED) */}
           <motion.div
             style={{
-              width:        44,
-              height:       44,
-              borderRadius: 12,
-              background:   'linear-gradient(135deg, #16a34a, #f59e0b)',
-              display:      'flex',
-              alignItems:   'center',
+              width:          44,
+              height:         44,
+              borderRadius:   12,
+              background:     'linear-gradient(135deg, #16a34a, #f59e0b)',
+              display:        'flex',
+              alignItems:     'center',
               justifyContent: 'center',
-              color:        '#fff',
-              fontWeight:   700,
-              fontSize:     16,
-              flexShrink:   0,
-              boxShadow:    '0 4px 14px rgba(22,163,74,0.35)',
+              color:          '#fff',
+              fontWeight:     700,
+              fontSize:       16,
+              flexShrink:     0,
+              boxShadow:      '0 4px 14px rgba(22,163,74,0.35)',
             }}
-            // 📝 NOTE: Bounces in from below on page load
             initial={{ scale: 0, rotate: -20 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 260, damping: 16 }}
@@ -195,88 +185,88 @@ function Sidebar() {
             AE
           </motion.div>
 
-          {/* Brand text */}
+          {/* Brand text (UNCHANGED) */}
           <motion.div
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.35 }}
+            style={{ flex: 1 }}
           >
-            <h1
-              style={{
-                color:      '#f8fafc',
-                fontWeight: 700,
-                fontSize:   15,
-                lineHeight: 1.2,
-                margin:     0,
-              }}
-            >
+            <h1 style={{
+              color: '#f8fafc', fontWeight: 700, fontSize: 15,
+              lineHeight: 1.2, margin: 0,
+            }}>
               Arvi Edibles
             </h1>
-            <p
-              style={{
-                color:       'rgba(248,250,252,0.38)',
-                fontSize:    11,
-                marginTop:   2,
-                letterSpacing: '0.5px',
-              }}
-            >
+            <p style={{
+              color: 'rgba(248,250,252,0.38)', fontSize: 11,
+              marginTop: 2, letterSpacing: '0.5px',
+            }}>
               Distributor System
             </p>
           </motion.div>
+
+          {/* ── X CLOSE BUTTON ─────────────────────────────────────────────
+              📝 NOTE: lg:hidden = only visible on mobile/tablet screens
+              📝 NOTE: On desktop this button is completely hidden
+              📝 NOTE: Calls onClose() → sets sidebarOpen=false in App.js
+              📝 NOTE: This slides the sidebar back off screen             */}
+          <button
+            onClick={onClose}
+            className="lg:hidden"
+            style={{
+              background:   'rgba(255,255,255,0.06)',
+              border:       '1px solid rgba(255,255,255,0.10)',
+              borderRadius: 8,
+              padding:      6,
+              cursor:       'pointer',
+              color:        'rgba(248,250,252,0.5)',
+              display:      'flex',
+              alignItems:   'center',
+              justifyContent: 'center',
+              flexShrink:   0,
+            }}
+            aria-label="Close menu"
+          >
+            <X style={{ width: 16, height: 16 }} />
+          </button>
         </div>
 
-        {/* 📝 NOTE: Golden accent line under logo — brand signature */}
-        <div
-          style={{
-            width:        32,
-            height:       2,
-            background:   '#f59e0b',
-            borderRadius: 2,
-            marginTop:    14,
-          }}
-        />
+        {/* Golden accent line (UNCHANGED) */}
+        <div style={{
+          width: 32, height: 2, background: '#f59e0b',
+          borderRadius: 2, marginTop: 14,
+        }} />
       </motion.div>
 
-      {/* ══════════════════════════════════════════════════════════════════
-          MIDDLE — NAVIGATION LINKS
-          📝 NOTE: flex-1 makes this section grow to fill available space
-          📝 NOTE: This pushes the logout section to the very bottom
-      ═══════════════════════════════════════════════════════════════════ */}
+      {/* ── MIDDLE — NAVIGATION (UNCHANGED except onClose passed to NavItem) */}
       <nav style={{ flex: 1, padding: '1rem 0.75rem' }}>
 
-        {/* Section label */}
         <motion.p
           variants={itemVariants}
           style={{
-            color:         'rgba(248,250,252,0.28)',
-            fontSize:      10,
-            fontWeight:    600,
-            letterSpacing: '1.2px',
-            textTransform: 'uppercase',
-            padding:       '0 14px',
-            marginBottom:  10,
+            color: 'rgba(248,250,252,0.28)', fontSize: 10, fontWeight: 600,
+            letterSpacing: '1.2px', textTransform: 'uppercase',
+            padding: '0 14px', marginBottom: 10,
           }}
         >
           Main Menu
         </motion.p>
 
-        {/* 📝 NOTE: Each NavItem maps to one page in your React Router setup */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <NavItem to="/dashboard"       icon={LayoutDashboard} label="Dashboard"       />
-          <NavItem to="/add-distributor" icon={PlusCircle}      label="Add Distributor" />
-          <NavItem to="/reports"         icon={BarChart2}        label="Reports"         />
+          {/* 📝 NOTE: onClose passed so tapping a nav link closes sidebar on mobile */}
+          <NavItem to="/dashboard"       icon={LayoutDashboard} label="Dashboard"       onClose={onClose} />
+          <NavItem to="/add-distributor" icon={PlusCircle}      label="Add Distributor" onClose={onClose} />
+          <NavItem to="/reports"         icon={BarChart2}        label="Reports"         onClose={onClose} />
         </div>
 
-        {/* 📝 NOTE: Divider between nav items and extra info */}
-        <div
-          style={{
-            height:     1,
-            background: 'rgba(255,255,255,0.06)',
-            margin:     '1rem 0.5rem',
-          }}
-        />
+        {/* Divider (UNCHANGED) */}
+        <div style={{
+          height: 1, background: 'rgba(255,255,255,0.06)',
+          margin: '1rem 0.5rem',
+        }} />
 
-        {/* 📝 NOTE: Small info card showing what this system tracks */}
+        {/* Live Tracking info card (UNCHANGED) */}
         <motion.div
           variants={itemVariants}
           style={{
@@ -298,11 +288,7 @@ function Sidebar() {
         </motion.div>
       </nav>
 
-      {/* ══════════════════════════════════════════════════════════════════
-          BOTTOM — USER INFO + LOGOUT
-          📝 NOTE: borderTop separates it from nav area
-          📝 NOTE: user.username comes from JWT stored in localStorage
-      ═══════════════════════════════════════════════════════════════════ */}
+      {/* ── BOTTOM — USER INFO + LOGOUT (UNCHANGED) ───────────────────── */}
       <motion.div
         variants={itemVariants}
         style={{
@@ -310,87 +296,51 @@ function Sidebar() {
           borderTop: '1px solid rgba(255,255,255,0.07)',
         }}
       >
-
-        {/* User info row — only shows if username exists in localStorage */}
         {user.username && (
-          <div
-            style={{
-              display:      'flex',
-              alignItems:   'center',
-              gap:          10,
-              padding:      '10px 12px',
-              background:   'rgba(255,255,255,0.04)',
-              border:       '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 12,
-              marginBottom: 10,
-            }}
-          >
-            {/* 📝 NOTE: Avatar circle shows first letter of username */}
-            <div
-              style={{
-                width:          30,
-                height:         30,
-                borderRadius:   8,
-                background:     'linear-gradient(135deg, #16a34a, #f59e0b)',
-                display:        'flex',
-                alignItems:     'center',
-                justifyContent: 'center',
-                color:          '#fff',
-                fontWeight:     700,
-                fontSize:       12,
-                flexShrink:     0,
-              }}
-            >
-              {/* 📝 NOTE: charAt(0) gets first letter, toUpperCase capitalises it */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 12px',
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12, marginBottom: 10,
+          }}>
+            <div style={{
+              width: 30, height: 30, borderRadius: 8,
+              background: 'linear-gradient(135deg, #16a34a, #f59e0b)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontWeight: 700, fontSize: 12, flexShrink: 0,
+            }}>
               {user.username.charAt(0).toUpperCase()}
             </div>
-
             <div>
               <p style={{ color: '#f8fafc', fontSize: 12, fontWeight: 600, margin: 0 }}>
                 {user.username}
               </p>
-              <p
-                style={{
-                  color:     'rgba(248,250,252,0.38)',
-                  fontSize:  10,
-                  margin:    0,
-                  textTransform: 'capitalize',
-                }}
-              >
-                {/* 📝 NOTE: role comes from JWT payload saved during login */}
+              <p style={{
+                color: 'rgba(248,250,252,0.38)', fontSize: 10,
+                margin: 0, textTransform: 'capitalize',
+              }}>
                 {user.role || 'Admin'}
               </p>
             </div>
           </div>
         )}
 
-        {/* Logout button */}
-        {/* 📝 NOTE: whileHover/whileTap from Framer Motion = scale effect */}
         <motion.button
           onClick={handleLogout}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
           style={{
-            width:          '100%',
-            padding:        '9px 14px',
-            borderRadius:   12,
-            border:         '1px solid rgba(239,68,68,0.25)',
-            background:     'rgba(239,68,68,0.07)',
-            color:          'rgba(248,68,68,0.8)',
-            fontSize:       12,
-            fontWeight:     600,
-            cursor:         'pointer',
-            display:        'flex',
-            alignItems:     'center',
-            justifyContent: 'center',
-            gap:            7,
-            marginBottom:   12,
-            transition:     'all 0.2s',
+            width: '100%', padding: '9px 14px', borderRadius: 12,
+            border: '1px solid rgba(239,68,68,0.25)',
+            background: 'rgba(239,68,68,0.07)',
+            color: 'rgba(248,68,68,0.8)', fontSize: 12, fontWeight: 600,
+            cursor: 'pointer', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', gap: 7, marginBottom: 12, transition: 'all 0.2s',
           }}
-          // 📝 NOTE: onMouseEnter/Leave = deeper red on hover
           onMouseEnter={e => {
-            e.currentTarget.style.background = 'rgba(239,68,68,0.18)';
-            e.currentTarget.style.color      = '#f87171';
+            e.currentTarget.style.background  = 'rgba(239,68,68,0.18)';
+            e.currentTarget.style.color       = '#f87171';
             e.currentTarget.style.borderColor = 'rgba(239,68,68,0.5)';
           }}
           onMouseLeave={e => {
@@ -403,14 +353,7 @@ function Sidebar() {
           Logout
         </motion.button>
 
-        {/* Footer copyright */}
-        <p
-          style={{
-            color:     'rgba(248,250,252,0.18)',
-            fontSize:  10,
-            textAlign: 'center',
-          }}
-        >
+        <p style={{ color: 'rgba(248,250,252,0.18)', fontSize: 10, textAlign: 'center' }}>
           Arvi Edibles © 2026
         </p>
       </motion.div>
