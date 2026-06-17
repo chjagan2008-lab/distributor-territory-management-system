@@ -12,7 +12,9 @@ const T = {
   border: 'rgba(255,255,255,0.07)',
 };
 
-function useCountUp(target, duration = 1500) {
+// ── COUNT UP HOOK (unchanged) ─────────────────────────────────────────────────
+function useCountUp(target, duration = 2200) {
+  // 📝 NOTE: duration changed from 1500 → 2200ms — slower = more dramatic
   const [count, setCount] = useState(0);
   const startTime = useRef(null); const frameRef = useRef(null);
   useEffect(() => {
@@ -40,24 +42,73 @@ function SkeletonCard() {
   );
 }
 
+// ── STAT CARD — ENHANCED VERSION ──────────────────────────────────────────────
+// 📝 NOTE: 3 new effects added:
+//   1. Card glows with accent color when count finishes
+//   2. Icon spins + scales when count finishes
+//   3. Number bounces up when count finishes
 function StatCard({ label, value, suffix = "", accentColor, accentGlow, icon, delay }) {
-  const animatedValue = useCountUp(value);
+  const animatedValue = useCountUp(value, 2200);
+
+  // 📝 NOTE: finished = true when animated number reaches the target value
+  const [finished, setFinished] = useState(false);
+
+  useEffect(() => {
+    // 📝 NOTE: Only trigger once — when count reaches target
+    if (animatedValue === value && value > 0) {
+      setFinished(true);
+    }
+  }, [animatedValue, value]);
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, scale: 1.015 }} transition={{ duration: 0.5, delay }}
-      style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16,
-        padding: '1.25rem', position: 'relative', overflow: 'hidden', cursor: 'default' }}
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -6, scale: 1.03 }}
+      transition={{ duration: 0.5, delay }}
+      style={{
+        background: T.card,
+        border: `1px solid ${T.cardBorder}`,
+        borderRadius: 16,
+        padding: '1.25rem',
+        position: 'relative',
+        overflow: 'hidden',
+        cursor: 'default',
+        // 📝 NOTE: boxShadow changes when finished = true
+        // Adds a coloured glow matching the card's accent colour
+        boxShadow: finished
+          ? `0 0 28px ${accentColor}40, 0 4px 16px rgba(0,0,0,0.3)`
+          : '0 4px 16px rgba(0,0,0,0.2)',
+        transition: 'box-shadow 0.7s ease',
+      }}
     >
+      {/* Top accent bar */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accentColor, borderRadius: '16px 16px 0 0' }} />
+
+      {/* Background glow circle */}
       <div style={{ position: 'absolute', top: -30, right: -30, width: 100, height: 100, borderRadius: '50%', background: accentGlow }} />
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, marginTop: 4 }}>
         <p style={{ color: T.textMuted, fontSize: 12, fontWeight: 500, margin: 0 }}>{label}</p>
-        <span style={{ fontSize: 16, padding: '4px 6px', borderRadius: 8, background: accentGlow }}>{icon}</span>
+
+        {/* 📝 NOTE: Icon spins and scales when count finishes */}
+        <motion.span
+          style={{ fontSize: 16, padding: '4px 6px', borderRadius: 8, background: accentGlow, display: 'block' }}
+          animate={finished ? { rotate: [0, 15, -15, 0], scale: [1, 1.25, 1] } : {}}
+          transition={{ duration: 0.5, ease: 'easeInOut' }}
+        >
+          {icon}
+        </motion.span>
       </div>
-      <p style={{ fontSize: 32, fontWeight: 700, color: accentColor, margin: 0 }}>
+
+      {/* 📝 NOTE: Number bounces upward when count finishes */}
+      <motion.p
+        style={{ fontSize: 32, fontWeight: 700, color: accentColor, margin: 0 }}
+        animate={finished ? { y: [0, -10, 0] } : {}}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+      >
         {animatedValue.toLocaleString()}{suffix}
-      </p>
+      </motion.p>
     </motion.div>
   );
 }
@@ -152,7 +203,6 @@ function DashboardPage() {
   }
 
   return (
-    // 📝 NOTE: clamp() = responsive padding — small on mobile, large on desktop
     <div style={{ padding: 'clamp(12px, 4vw, 32px)', minHeight: '100vh', background: T.bg }}>
 
       {/* Header */}
@@ -201,14 +251,14 @@ function DashboardPage() {
         </motion.div>
       )}
 
-      {/* 📝 NOTE: auto-fit minmax = 1 col mobile, 2 col tablet, 3 col desktop */}
+      {/* Stat Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 16, marginBottom: 24 }}>
         <StatCard label="Total Distributors" value={totalDistributors} accentColor={T.green} accentGlow={T.greenGlow} icon="🏪" delay={0.1} />
         <StatCard label="Total Monthly Offtake" value={totalOfftake} accentColor="#378ADD" accentGlow="rgba(55,138,221,0.15)" icon="📦" delay={0.2} />
         <StatCard label="Active Distributors" value={activeCount} accentColor={T.amber} accentGlow={T.amberGlow} icon="✅" delay={0.3} />
       </div>
 
-      {/* 📝 NOTE: Charts stack to 1 col on mobile, 2 col on desktop */}
+      {/* Charts */}
       {distributors.length > 0 && (
         <motion.div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(280px,1fr))', gap: 16, marginBottom: 24 }}
           variants={containerVariants} initial="hidden" animate="visible">
@@ -239,18 +289,15 @@ function DashboardPage() {
         </motion.div>
       )}
 
-      {/* Table Card */}
+      {/* Table */}
       <motion.div style={{ background: T.card, border: `1px solid ${T.cardBorder}`, borderRadius: 16, padding: 'clamp(14px,3vw,24px)' }}
         initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.5 }}>
-
-        {/* 📝 NOTE: flexWrap=wrap so search+filters wrap on small screens */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
           <h3 style={{ fontSize: 13, fontWeight: 600, color: T.textPrimary, margin: 0 }}>
             All Distributors <span style={{ fontSize: 11, color: T.textFaint }}>(tap row for details)</span>
           </h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* Search */}
             <div style={{ position: 'relative' }}>
               <span style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: T.textMuted, pointerEvents: 'none' }}>🔍</span>
               <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -261,7 +308,6 @@ function DashboardPage() {
                 onFocus={e => { e.target.style.borderColor = 'rgba(22,163,74,0.6)'; }}
                 onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; }} />
             </div>
-            {/* Filter buttons */}
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               {['all', 'active', 'inactive', 'pending'].map(filter => {
                 const isActive = statusFilter === filter;
@@ -292,7 +338,6 @@ function DashboardPage() {
           </div>
         ) : (
           <>
-            {/* 📝 NOTE: overflowX:auto = horizontal scroll on mobile */}
             <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
               <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', minWidth: 480 }}>
                 <thead>
