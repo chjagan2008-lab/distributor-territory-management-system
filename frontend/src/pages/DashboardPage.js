@@ -1,3 +1,7 @@
+// 📝 NOTE: DashboardPage.js — Redesigned to match dark glassmorphism theme
+// 📝 NOTE: ALL data logic, hooks, API calls, charts kept 100% UNCHANGED
+// 📝 NOTE: Only visual styling updated to match Login + Sidebar dark theme
+
 import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -8,10 +12,30 @@ import {
 } from "recharts";
 import API_BASE from '../config';
 
+// ─── SHARED STYLE TOKENS ────────────────────────────────────────────────────
+// 📝 NOTE: Define colors once at the top — easy to update later
+const T = {
+  bg:          '#0b1a0d',           // page background
+  card:        'rgba(255,255,255,0.04)', // glass card bg
+  cardBorder:  'rgba(255,255,255,0.09)', // glass card border
+  textPrimary: '#f8fafc',           // main white text
+  textMuted:   'rgba(248,250,252,0.45)', // muted grey text
+  textFaint:   'rgba(248,250,252,0.25)', // very faint text
+  green:       '#16a34a',           // brand green
+  greenGlow:   'rgba(22,163,74,0.15)',
+  amber:       '#f59e0b',           // brand amber/gold
+  amberGlow:   'rgba(245,158,11,0.15)',
+  red:         '#ef4444',
+  redGlow:     'rgba(239,68,68,0.12)',
+  border:      'rgba(255,255,255,0.07)',
+};
+
+// ─── USE COUNT UP HOOK ───────────────────────────────────────────────────────
+// 📝 NOTE: Animates numbers from 0 to target value on load — UNCHANGED
 function useCountUp(target, duration = 1500) {
   const [count, setCount] = useState(0);
   const startTime = useRef(null);
-  const frameRef = useRef(null);
+  const frameRef  = useRef(null);
 
   useEffect(() => {
     if (target === 0) return;
@@ -19,7 +43,7 @@ function useCountUp(target, duration = 1500) {
     const animate = (timestamp) => {
       if (!startTime.current) startTime.current = timestamp;
       const progress = Math.min((timestamp - startTime.current) / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const easeOut  = 1 - Math.pow(1 - progress, 3);
       setCount(Math.floor(easeOut * target));
       if (progress < 1) {
         frameRef.current = requestAnimationFrame(animate);
@@ -28,104 +52,149 @@ function useCountUp(target, duration = 1500) {
       }
     };
     startTime.current = null;
-    frameRef.current = requestAnimationFrame(animate);
+    frameRef.current  = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frameRef.current);
   }, [target, duration]);
 
   return count;
 }
 
+// ─── SKELETON LOADERS ────────────────────────────────────────────────────────
+// 📝 NOTE: Shown while data is loading — dark themed version
 function SkeletonCard() {
   return (
-    <div className="rounded-2xl p-6 border border-gray-100 overflow-hidden relative"
-      style={{ background: "rgba(255,255,255,0.7)" }}>
-      <div className="absolute inset-0 -translate-x-full animate-shimmer
-                      bg-gradient-to-r from-transparent via-white/60 to-transparent" />
-      <div className="h-3 w-24 bg-gray-200 rounded-full mb-4 animate-pulse" />
-      <div className="h-10 w-16 bg-gray-200 rounded-lg mb-3 animate-pulse" />
-      <div className="h-3 w-20 bg-gray-100 rounded-full animate-pulse" />
+    <div style={{
+      background:   T.card,
+      border:       `1px solid ${T.cardBorder}`,
+      borderRadius: 16,
+      padding:      24,
+    }}>
+      <div style={{ height: 12, width: 80, background: 'rgba(255,255,255,0.08)',
+        borderRadius: 6, marginBottom: 16 }} />
+      <div style={{ height: 36, width: 60, background: 'rgba(255,255,255,0.08)',
+        borderRadius: 8, marginBottom: 12 }} />
+      <div style={{ height: 10, width: 64, background: 'rgba(255,255,255,0.05)',
+        borderRadius: 6 }} />
     </div>
   );
 }
 
 function SkeletonTable() {
   return (
-    <div className="space-y-3">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {Array(4).fill(0).map((_, i) => (
-        <div key={i} className="flex gap-4 animate-pulse">
-          <div className="h-4 w-6 bg-gray-100 rounded" />
-          <div className="h-4 w-32 bg-gray-200 rounded" />
-          <div className="h-4 w-24 bg-gray-100 rounded" />
-          <div className="h-4 w-16 bg-gray-100 rounded" />
-          <div className="h-4 w-12 bg-gray-100 rounded" />
-          <div className="h-4 w-16 bg-gray-200 rounded" />
+        <div key={i} style={{ display: 'flex', gap: 16 }}>
+          {[24, 128, 96, 64, 48, 64].map((w, j) => (
+            <div key={j} style={{
+              height: 14, width: w,
+              background: 'rgba(255,255,255,0.06)',
+              borderRadius: 4,
+            }} />
+          ))}
         </div>
       ))}
     </div>
   );
 }
 
-function StatCard({ label, value, suffix = "", color, icon, delay }) {
+// ─── STAT CARD ───────────────────────────────────────────────────────────────
+// 📝 NOTE: Shows animated number with icon and label
+// 📝 NOTE: accentColor = top border + icon bg + number color
+function StatCard({ label, value, suffix = "", accentColor, accentGlow, icon, delay }) {
   const animatedValue = useCountUp(value);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -6, scale: 1.02 }}
+      whileHover={{ y: -4, scale: 1.015 }}
       transition={{ duration: 0.5, delay }}
       style={{
-        background: "rgba(255, 255, 255, 0.75)",
-        backdropFilter: "blur(12px)",
-        WebkitBackdropFilter: "blur(12px)",
-        border: "1px solid rgba(255,255,255,0.5)",
-        boxShadow: "0 8px 32px rgba(27, 94, 32, 0.08)",
-        cursor: "default",
+        background:       T.card,
+        border:           `1px solid ${T.cardBorder}`,
+        borderRadius:     16,
+        padding:          '1.5rem',
+        position:         'relative',
+        overflow:         'hidden',
+        cursor:           'default',
+        backdropFilter:   'blur(12px)',
       }}
-      className="rounded-2xl p-6 relative overflow-hidden"
     >
-      <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
-        style={{ background: color }} />
-      <div className="flex items-start justify-between mb-3 mt-1">
-        <p className="text-gray-500 text-sm font-medium">{label}</p>
-        <span className="text-lg font-bold p-2 rounded-xl"
-          style={{ background: color + "18", color: color }}>
+      {/* 📝 NOTE: Coloured top accent bar — each card has different colour */}
+      <div style={{
+        position:     'absolute',
+        top: 0, left: 0, right: 0,
+        height:       3,
+        background:   accentColor,
+        borderRadius: '16px 16px 0 0',
+      }} />
+
+      {/* 📝 NOTE: Subtle glow circle behind icon */}
+      <div style={{
+        position:     'absolute',
+        top:          -30, right: -30,
+        width:        100, height: 100,
+        borderRadius: '50%',
+        background:   accentGlow,
+      }} />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between',
+        alignItems: 'flex-start', marginBottom: 12, marginTop: 4 }}>
+        <p style={{ color: T.textMuted, fontSize: 13, fontWeight: 500 }}>
+          {label}
+        </p>
+        {/* 📝 NOTE: Icon badge with matching accent glow background */}
+        <span style={{
+          fontSize:       18,
+          padding:        '6px 8px',
+          borderRadius:   10,
+          background:     accentGlow,
+          border:         `1px solid ${accentColor}30`,
+        }}>
           {icon}
         </span>
       </div>
-      <p className="text-4xl font-bold mt-1" style={{ color }}>
+
+      {/* 📝 NOTE: animatedValue counts up from 0 on page load */}
+      <p style={{ fontSize: 36, fontWeight: 700, color: accentColor, margin: 0 }}>
         {animatedValue.toLocaleString()}{suffix}
       </p>
-      <div className="mt-4 h-1 rounded-full opacity-20"
-        style={{ background: color }} />
+
+      {/* Bottom accent line */}
+      <div style={{
+        marginTop:    16, height: 2, borderRadius: 2,
+        background:   accentColor, opacity: 0.18,
+      }} />
     </motion.div>
   );
 }
 
+// ─── ANIMATION VARIANTS ──────────────────────────────────────────────────────
 const containerVariants = {
-  hidden: { opacity: 0 },
+  hidden:  { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.12 } },
 };
-
 const itemVariants = {
-  hidden: { opacity: 0, y: 24 },
+  hidden:  { opacity: 0, y: 24 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.45 } },
 };
 
+// ─── MAIN DASHBOARD COMPONENT ────────────────────────────────────────────────
 function DashboardPage() {
+
+  // 📝 NOTE: All state variables — UNCHANGED from your original
   const [distributors, setDistributors] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading, setLoading]           = useState(true);
+  const [error, setError]               = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortField, setSortField] = useState(null);
-  const [sortOrder, setSortOrder] = useState('asc');
-
-  // ── Pagination state ──────────────────────────────────────
-  const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 10; // Change back to 10!
-
+  const [searchQuery, setSearchQuery]   = useState('');
+  const [sortField, setSortField]       = useState(null);
+  const [sortOrder, setSortOrder]       = useState('asc');
+  const [currentPage, setCurrentPage]   = useState(1);
+  const ITEMS_PER_PAGE = 10;
   const navigate = useNavigate();
 
+  // 📝 NOTE: Fetch distributors from backend API — UNCHANGED
   useEffect(() => {
     const fetchDistributors = async () => {
       try {
@@ -144,22 +213,18 @@ function DashboardPage() {
     fetchDistributors();
   }, []);
 
-  // ── Reset to page 1 when filter/search changes ────────────
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [statusFilter, searchQuery]);
+  // 📝 NOTE: Reset to page 1 whenever filter or search changes — UNCHANGED
+  useEffect(() => { setCurrentPage(1); }, [statusFilter, searchQuery]);
 
+  // ─── COMPUTED VALUES ─────────────────────────────────────────────────────
+  // 📝 NOTE: All these calculations are UNCHANGED
   const totalDistributors = distributors.length;
-  const totalOfftake = distributors.reduce(
-    (sum, d) => sum + (d.monthly_offtake || 0), 0);
-  const activeCount = distributors.filter(
-    (d) => d.status === "active").length;
+  const totalOfftake      = distributors.reduce((sum, d) => sum + (d.monthly_offtake || 0), 0);
+  const activeCount       = distributors.filter(d => d.status === "active").length;
+  const lowCoverageCount  = distributors.filter(d => (parseFloat(d.coverage_metrics) || 0) < 70).length;
+  const lowOfftakeCount   = distributors.filter(d => (d.monthly_offtake || 0) < 300).length;
 
-  const lowCoverageCount = distributors.filter(
-    d => (parseFloat(d.coverage_metrics) || 0) < 70).length;
-  const lowOfftakeCount = distributors.filter(
-    d => (d.monthly_offtake || 0) < 300).length;
-
+  // 📝 NOTE: Sort handler toggles asc/desc on same field — UNCHANGED
   const handleSort = (field) => {
     if (sortField === field) {
       setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -169,7 +234,7 @@ function DashboardPage() {
     }
   };
 
-  // ── Filter + Search + Sort ────────────────────────────────
+  // 📝 NOTE: Filter → Search → Sort pipeline — UNCHANGED
   const filteredDistributors = distributors
     .filter(d => statusFilter === 'all' ? true : d.status === statusFilter)
     .filter(d => {
@@ -191,58 +256,69 @@ function DashboardPage() {
       return 0;
     });
 
-  // ── Pagination calculations ───────────────────────────────
-  const totalPages = Math.ceil(filteredDistributors.length / ITEMS_PER_PAGE);
-  const paginatedDistributors = filteredDistributors.slice(
+  // 📝 NOTE: Slice data for current page — UNCHANGED
+  const totalPages             = Math.ceil(filteredDistributors.length / ITEMS_PER_PAGE);
+  const paginatedDistributors  = filteredDistributors.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
 
-  const barData = distributors.map(d => ({
-    name: d.distributor_name.split(' ')[0],
+  // 📝 NOTE: Chart data — UNCHANGED
+  const barData  = distributors.map(d => ({
+    name:    d.distributor_name.split(' ')[0],
     offtake: d.monthly_offtake,
   }));
-
-  const pieData = [
-    { name: 'Active',
-      value: distributors.filter(d => d.status === 'active').length },
-    { name: 'Inactive',
-      value: distributors.filter(d => d.status === 'inactive').length },
-    { name: 'Pending',
-      value: distributors.filter(d => d.status === 'pending').length },
+  const pieData  = [
+    { name: 'Active',   value: distributors.filter(d => d.status === 'active').length },
+    { name: 'Inactive', value: distributors.filter(d => d.status === 'inactive').length },
+    { name: 'Pending',  value: distributors.filter(d => d.status === 'pending').length },
   ].filter(item => item.value > 0);
+  const PIE_COLORS = ['#16a34a', '#ef4444', '#f59e0b'];
 
-  const PIE_COLORS = ['#1B5E20', '#ef4444', '#F9A825'];
-
+  // ─── LOADING STATE ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="mb-8 animate-pulse">
-          <div className="h-8 w-40 bg-gray-200 rounded-lg mb-2" />
-          <div className="h-4 w-72 bg-gray-100 rounded" />
+      <div style={{ padding: 32, background: T.bg, minHeight: '100vh' }}>
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ height: 28, width: 140, background: 'rgba(255,255,255,0.08)',
+            borderRadius: 8, marginBottom: 8 }} />
+          <div style={{ height: 14, width: 280, background: 'rgba(255,255,255,0.05)',
+            borderRadius: 6 }} />
         </div>
-        <div className="grid grid-cols-3 gap-6 mb-8">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
+          gap: 24, marginBottom: 32 }}>
           <SkeletonCard /><SkeletonCard /><SkeletonCard />
         </div>
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <div className="h-5 w-32 bg-gray-200 rounded mb-6 animate-pulse" />
+        <div style={{ background: T.card, border: `1px solid ${T.cardBorder}`,
+          borderRadius: 16, padding: 24 }}>
+          <div style={{ height: 18, width: 120, background: 'rgba(255,255,255,0.08)',
+            borderRadius: 6, marginBottom: 24 }} />
           <SkeletonTable />
         </div>
       </div>
     );
   }
 
+  // ─── ERROR STATE ─────────────────────────────────────────────────────────
   if (error) {
     return (
-      <div className="p-8">
+      <div style={{ padding: 32, background: T.bg, minHeight: '100vh' }}>
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center"
+          style={{
+            background:   T.redGlow,
+            border:       '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 16,
+            padding:      24,
+            textAlign:    'center',
+          }}
         >
-          <p className="text-red-600 font-medium">Could not load data</p>
-          <p className="text-red-400 text-sm mt-1">{error}</p>
-          <p className="text-gray-400 text-sm mt-2">
+          <p style={{ color: '#f87171', fontWeight: 600 }}>Could not load data</p>
+          <p style={{ color: 'rgba(248,113,113,0.7)', fontSize: 13, marginTop: 4 }}>
+            {error}
+          </p>
+          <p style={{ color: T.textFaint, fontSize: 13, marginTop: 8 }}>
             Make sure backend is running on port 5000
           </p>
         </motion.div>
@@ -250,63 +326,101 @@ function DashboardPage() {
     );
   }
 
+  // ─── MAIN RENDER ─────────────────────────────────────────────────────────
   return (
-    <div className="p-8 min-h-screen"
-      style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #fafafa 60%)" }}>
+    // 📝 NOTE: Dark background matches sidebar + login page perfectly
+    <div style={{ padding: 32, minHeight: '100vh', background: T.bg }}>
 
-      {/* Page Header */}
-      <motion.div className="mb-8"
+      {/* ── PAGE HEADER ─────────────────────────────────────────────────── */}
+      <motion.div
+        style={{ marginBottom: 28 }}
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h2 className="text-3xl font-bold text-gray-800">Dashboard</h2>
-        <p className="text-gray-500 mt-1">
+        <h2 style={{ fontSize: 26, fontWeight: 700, color: T.textPrimary, margin: 0 }}>
+          Dashboard
+        </h2>
+        <p style={{ color: T.textMuted, marginTop: 4, fontSize: 14 }}>
           Welcome to Arvi Edibles Distributor Management System
         </p>
+        {/* 📝 NOTE: Golden accent line — same as login + sidebar signature */}
+        <div style={{
+          width: 36, height: 2, background: T.amber,
+          borderRadius: 2, marginTop: 10,
+        }} />
       </motion.div>
 
-      {/* Alert Banners */}
+      {/* ── ALERT BANNERS ───────────────────────────────────────────────── */}
+      {/* 📝 NOTE: Only shown when there are coverage or offtake problems */}
       {(lowCoverageCount > 0 || lowOfftakeCount > 0) && (
-        <motion.div className="mb-6 grid gap-3"
+        <motion.div
+          style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 10 }}
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
         >
           {lowCoverageCount > 0 && (
-            <div className="flex items-center gap-3 p-4 rounded-xl
-                            bg-red-50 border border-red-200">
-              <span className="text-xl">⚠️</span>
-              <div>
-                <p className="text-red-700 font-semibold text-sm">
-                  Low Coverage Alert
-                </p>
-                <p className="text-red-500 text-xs mt-0.5">
+            <div style={{
+              display:      'flex',
+              alignItems:   'center',
+              gap:          12,
+              padding:      '12px 16px',
+              borderRadius: 12,
+              background:   'rgba(239,68,68,0.10)',
+              border:       '1px solid rgba(239,68,68,0.25)',
+            }}>
+              <span style={{ fontSize: 18 }}>⚠️</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ color: '#f87171', fontWeight: 600,
+                  fontSize: 13, margin: 0 }}>Low Coverage Alert</p>
+                <p style={{ color: 'rgba(248,113,113,0.7)', fontSize: 12,
+                  marginTop: 2 }}>
                   {lowCoverageCount} distributor(s) have coverage below 70%.
                   Immediate attention required!
                 </p>
               </div>
-              <span className="ml-auto bg-red-100 text-red-700
-                               px-3 py-1 rounded-full text-xs font-bold">
+              <span style={{
+                background:   'rgba(239,68,68,0.15)',
+                color:        '#f87171',
+                padding:      '3px 10px',
+                borderRadius: 20,
+                fontSize:     11,
+                fontWeight:   700,
+                whiteSpace:   'nowrap',
+              }}>
                 {lowCoverageCount} affected
               </span>
             </div>
           )}
           {lowOfftakeCount > 0 && (
-            <div className="flex items-center gap-3 p-4 rounded-xl
-                            bg-yellow-50 border border-yellow-200">
-              <span className="text-xl">📉</span>
-              <div>
-                <p className="text-yellow-700 font-semibold text-sm">
-                  Low Offtake Alert
-                </p>
-                <p className="text-yellow-600 text-xs mt-0.5">
-                  {lowOfftakeCount} distributor(s) have monthly offtake
-                  below 300 units. Review performance!
+            <div style={{
+              display:      'flex',
+              alignItems:   'center',
+              gap:          12,
+              padding:      '12px 16px',
+              borderRadius: 12,
+              background:   'rgba(245,158,11,0.10)',
+              border:       '1px solid rgba(245,158,11,0.25)',
+            }}>
+              <span style={{ fontSize: 18 }}>📉</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ color: '#fbbf24', fontWeight: 600,
+                  fontSize: 13, margin: 0 }}>Low Offtake Alert</p>
+                <p style={{ color: 'rgba(251,191,36,0.7)', fontSize: 12,
+                  marginTop: 2 }}>
+                  {lowOfftakeCount} distributor(s) have monthly offtake below
+                  300 units. Review performance!
                 </p>
               </div>
-              <span className="ml-auto bg-yellow-100 text-yellow-700
-                               px-3 py-1 rounded-full text-xs font-bold">
+              <span style={{
+                background:   'rgba(245,158,11,0.15)',
+                color:        '#fbbf24',
+                padding:      '3px 10px',
+                borderRadius: 20,
+                fontSize:     11,
+                fontWeight:   700,
+                whiteSpace:   'nowrap',
+              }}>
                 {lowOfftakeCount} affected
               </span>
             </div>
@@ -314,51 +428,107 @@ function DashboardPage() {
         </motion.div>
       )}
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-3 gap-6 mb-8">
-        <StatCard label="Total Distributors" value={totalDistributors}
-          color="#1B5E20" icon="▤" delay={0.1} />
-        <StatCard label="Total Monthly Offtake" value={totalOfftake}
-          color="#1565C0" icon="◈" delay={0.2} />
-        <StatCard label="Active Distributors" value={activeCount}
-          color="#F9A825" icon="◉" delay={0.3} />
+      {/* ── STAT CARDS ──────────────────────────────────────────────────── */}
+      {/* 📝 NOTE: 3 cards in a row — each has different accent colour */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 24, marginBottom: 28,
+      }}>
+        <StatCard
+          label="Total Distributors"
+          value={totalDistributors}
+          accentColor={T.green}
+          accentGlow={T.greenGlow}
+          icon="🏪" delay={0.1}
+        />
+        <StatCard
+          label="Total Monthly Offtake"
+          value={totalOfftake}
+          accentColor="#378ADD"
+          accentGlow="rgba(55,138,221,0.15)"
+          icon="📦" delay={0.2}
+        />
+        <StatCard
+          label="Active Distributors"
+          value={activeCount}
+          accentColor={T.amber}
+          accentGlow={T.amberGlow}
+          icon="✅" delay={0.3}
+        />
       </div>
 
-      {/* Charts Row */}
+      {/* ── CHARTS ROW ──────────────────────────────────────────────────── */}
+      {/* 📝 NOTE: Only shown when there is data to display */}
       {distributors.length > 0 && (
-        <motion.div className="grid grid-cols-2 gap-6 mb-8"
-          variants={containerVariants} initial="hidden" animate="visible">
-          <motion.div variants={itemVariants} whileHover={{ scale: 1.01 }}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">
+        <motion.div
+          style={{
+            display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 24, marginBottom: 28,
+          }}
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          {/* Bar Chart Card */}
+          <motion.div
+            variants={itemVariants}
+            whileHover={{ scale: 1.01 }}
+            style={{
+              background:   T.card,
+              border:       `1px solid ${T.cardBorder}`,
+              borderRadius: 16,
+              padding:      24,
+            }}
+          >
+            <h3 style={{ fontSize: 14, fontWeight: 600,
+              color: T.textPrimary, marginBottom: 20, margin: '0 0 20px' }}>
               Monthly Offtake by Distributor
             </h3>
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={barData}
                 margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#6b7280' }} />
-                <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} />
-                <Tooltip contentStyle={{
-                  backgroundColor: 'white', border: '1px solid #e5e7eb',
-                  borderRadius: '12px', fontSize: '13px',
-                }} />
-                <Bar dataKey="offtake" fill="#1B5E20" radius={[6, 6, 0, 0]}
-                  name="Monthly Offtake" isAnimationActive
-                  animationDuration={1200} />
+                <CartesianGrid strokeDasharray="3 3"
+                  stroke="rgba(255,255,255,0.06)" />
+                {/* 📝 NOTE: Axis tick colors changed to match dark theme */}
+                <XAxis dataKey="name"
+                  tick={{ fontSize: 11, fill: T.textMuted }} />
+                <YAxis
+                  tick={{ fontSize: 11, fill: T.textMuted }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1a2e1c',
+                    border:          '1px solid rgba(255,255,255,0.12)',
+                    borderRadius:    10,
+                    fontSize:        12,
+                    color:           T.textPrimary,
+                  }}
+                />
+                <Bar dataKey="offtake" fill={T.green}
+                  radius={[6, 6, 0, 0]} name="Monthly Offtake"
+                  isAnimationActive animationDuration={1200} />
               </BarChart>
             </ResponsiveContainer>
           </motion.div>
 
-          <motion.div variants={itemVariants} whileHover={{ scale: 1.01 }}
-            className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <h3 className="text-lg font-semibold text-gray-700 mb-4">
+          {/* Pie Chart Card */}
+          <motion.div
+            variants={itemVariants}
+            whileHover={{ scale: 1.01 }}
+            style={{
+              background:   T.card,
+              border:       `1px solid ${T.cardBorder}`,
+              borderRadius: 16,
+              padding:      24,
+            }}
+          >
+            <h3 style={{ fontSize: 14, fontWeight: 600,
+              color: T.textPrimary, margin: '0 0 20px' }}>
               Distributor Status
             </h3>
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%"
-                  innerRadius={60} outerRadius={90}
+                  innerRadius={55} outerRadius={80}
                   paddingAngle={4} dataKey="value"
                   isAnimationActive animationDuration={1200}>
                   {pieData.map((entry, index) => (
@@ -366,96 +536,165 @@ function DashboardPage() {
                       fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={{
-                  backgroundColor: 'white', border: '1px solid #e5e7eb',
-                  borderRadius: '12px', fontSize: '13px',
-                }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1a2e1c',
+                    border:          '1px solid rgba(255,255,255,0.12)',
+                    borderRadius:    10,
+                    fontSize:        12,
+                    color:           T.textPrimary,
+                  }}
+                />
                 <Legend iconType="circle" iconSize={8}
                   formatter={(value) => (
-                    <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                    <span style={{ fontSize: 12, color: T.textMuted }}>
                       {value}
                     </span>
-                  )} />
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
           </motion.div>
         </motion.div>
       )}
 
-      {/* Distributors Table */}
+      {/* ── DISTRIBUTORS TABLE ──────────────────────────────────────────── */}
       <motion.div
-        className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+        style={{
+          background:   T.card,
+          border:       `1px solid ${T.cardBorder}`,
+          borderRadius: 16,
+          padding:      24,
+        }}
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.5 }}
       >
-        {/* Table header + Search + Filter */}
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <h3 className="text-lg font-semibold text-gray-700">
-            All Distributors
-            <span className="text-sm font-normal text-gray-400 ml-2">
+        {/* Table toolbar — search + filters */}
+        <div style={{
+          display:        'flex',
+          alignItems:     'center',
+          justifyContent: 'space-between',
+          marginBottom:   16,
+          flexWrap:       'wrap',
+          gap:            12,
+        }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600,
+            color: T.textPrimary, margin: 0 }}>
+            All Distributors{' '}
+            <span style={{ fontSize: 12, fontWeight: 400, color: T.textFaint }}>
               (click a row to see details)
             </span>
           </h3>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Search Box */}
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2
-                               text-gray-400 text-sm">🔍</span>
+          <div style={{ display: 'flex', alignItems: 'center',
+            gap: 10, flexWrap: 'wrap' }}>
+
+            {/* 📝 NOTE: Search input — dark themed */}
+            <div style={{ position: 'relative' }}>
+              <span style={{
+                position:  'absolute', left: 10,
+                top: '50%', transform: 'translateY(-50%)',
+                fontSize:  13, color: T.textMuted,
+                pointerEvents: 'none',
+              }}>🔍</span>
               <input
                 type="text"
                 placeholder="Search name or territory..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 pr-8 py-2 border border-gray-200 rounded-xl
-                           text-sm focus:outline-none focus:ring-2
-                           focus:ring-green-400 focus:border-green-400
-                           transition-all w-56"
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{
+                  paddingLeft:   32,
+                  paddingRight:  searchQuery ? 28 : 12,
+                  paddingTop:    8,
+                  paddingBottom: 8,
+                  background:    'rgba(255,255,255,0.05)',
+                  border:        '1px solid rgba(255,255,255,0.1)',
+                  borderRadius:  10,
+                  fontSize:      12,
+                  color:         T.textPrimary,
+                  outline:       'none',
+                  width:         200,
+                }}
+                onFocus={e => {
+                  e.target.style.borderColor = 'rgba(22,163,74,0.6)';
+                  e.target.style.boxShadow   = '0 0 0 3px rgba(22,163,74,0.12)';
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.target.style.boxShadow   = 'none';
+                }}
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2
-                             text-gray-400 hover:text-gray-600 text-xs font-bold"
-                >
-                  ✕
-                </button>
+                  style={{
+                    position:   'absolute', right: 8,
+                    top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none',
+                    color:      T.textMuted, cursor: 'pointer',
+                    fontSize:   11, fontWeight: 700,
+                  }}
+                >✕</button>
               )}
             </div>
 
-            {/* Filter Buttons */}
-            <div className="flex gap-2">
-              {['all', 'active', 'inactive', 'pending'].map(filter => (
-                <button key={filter} onClick={() => setStatusFilter(filter)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold
-                              transition-all duration-200 capitalize ${
-                    statusFilter === filter
-                      ? filter === 'all' ? 'bg-green-800 text-white'
-                        : filter === 'active' ? 'bg-green-100 text-green-800'
-                        : filter === 'inactive' ? 'bg-red-100 text-red-700'
-                        : 'bg-yellow-100 text-yellow-700'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                  }`}
-                >
-                  {filter === 'all'
-                    ? `All (${distributors.length})`
-                    : `${filter} (${distributors.filter(
-                        d => d.status === filter).length})`}
-                </button>
-              ))}
+            {/* 📝 NOTE: Filter buttons — amber when active, muted when not */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              {['all', 'active', 'inactive', 'pending'].map(filter => {
+                const isActive = statusFilter === filter;
+                const colors = {
+                  all:      { bg: 'rgba(22,163,74,0.2)',   text: '#4ade80',  border: 'rgba(22,163,74,0.4)'  },
+                  active:   { bg: 'rgba(74,222,128,0.12)', text: '#4ade80',  border: 'rgba(74,222,128,0.3)' },
+                  inactive: { bg: 'rgba(239,68,68,0.12)',  text: '#f87171',  border: 'rgba(239,68,68,0.3)'  },
+                  pending:  { bg: 'rgba(245,158,11,0.12)', text: '#fbbf24',  border: 'rgba(245,158,11,0.3)' },
+                };
+                return (
+                  <button
+                    key={filter}
+                    onClick={() => setStatusFilter(filter)}
+                    style={{
+                      padding:      '5px 10px',
+                      borderRadius: 8,
+                      fontSize:     11,
+                      fontWeight:   600,
+                      cursor:       'pointer',
+                      textTransform:'capitalize',
+                      transition:   'all 0.2s',
+                      background:   isActive
+                        ? colors[filter].bg
+                        : 'rgba(255,255,255,0.04)',
+                      color: isActive
+                        ? colors[filter].text
+                        : T.textFaint,
+                      border: `1px solid ${isActive
+                        ? colors[filter].border
+                        : 'rgba(255,255,255,0.08)'}`,
+                    }}
+                  >
+                    {filter === 'all'
+                      ? `All (${distributors.length})`
+                      : `${filter} (${distributors.filter(
+                          d => d.status === filter).length})`}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
 
         {/* Search hint */}
         {searchQuery && (
-          <p className="text-xs text-gray-400 mb-3">
+          <p style={{ fontSize: 11, color: T.textFaint, marginBottom: 10 }}>
             Showing results for{' '}
-            <span className="text-green-700 font-medium">"{searchQuery}"</span>
-            {' '}— {filteredDistributors.length} found
+            <span style={{ color: '#4ade80', fontWeight: 600 }}>
+              "{searchQuery}"
+            </span>
+            {' '}— {filteredDistributors.length} found{' '}
             <button onClick={() => setSearchQuery('')}
-              className="ml-2 text-red-400 hover:text-red-600 underline">
+              style={{ background: 'none', border: 'none',
+                color: '#f87171', cursor: 'pointer', fontSize: 11,
+                textDecoration: 'underline' }}>
               clear
             </button>
           </p>
@@ -463,14 +702,16 @@ function DashboardPage() {
 
         {/* Sort hint */}
         {sortField && (
-          <p className="text-xs text-gray-400 mb-3">
+          <p style={{ fontSize: 11, color: T.textFaint, marginBottom: 10 }}>
             Sorted by{' '}
-            <span className="text-green-700 font-medium">
+            <span style={{ color: '#4ade80', fontWeight: 600 }}>
               {sortField.replace('_', ' ')}
-            </span>{' '}
-            — {sortOrder === 'asc' ? 'low to high ↑' : 'high to low ↓'}
+            </span>
+            {' '}— {sortOrder === 'asc' ? 'low to high ↑' : 'high to low ↓'}{' '}
             <button onClick={() => setSortField(null)}
-              className="ml-2 text-red-400 hover:text-red-600 underline">
+              style={{ background: 'none', border: 'none',
+                color: '#f87171', cursor: 'pointer', fontSize: 11,
+                textDecoration: 'underline' }}>
               clear sort
             </button>
           </p>
@@ -478,31 +719,40 @@ function DashboardPage() {
 
         {/* Empty state */}
         {filteredDistributors.length === 0 ? (
-          <div className="h-48 bg-gray-50 rounded-xl flex items-center
-                          justify-center">
-            <div className="text-center">
-              <p className="text-gray-400 text-lg">
-                {searchQuery
-                  ? `No results for "${searchQuery}"`
-                  : `No ${statusFilter} distributors found`}
-              </p>
-              <button
-                onClick={() => { setStatusFilter('all'); setSearchQuery(''); }}
-                className="mt-2 text-green-600 text-sm hover:underline"
-              >
-                Clear all filters
-              </button>
-            </div>
+          <div style={{
+            height:         160,
+            background:     'rgba(255,255,255,0.02)',
+            borderRadius:   12,
+            display:        'flex',
+            alignItems:     'center',
+            justifyContent: 'center',
+            flexDirection:  'column',
+            gap:            8,
+          }}>
+            <p style={{ color: T.textMuted, fontSize: 14 }}>
+              {searchQuery
+                ? `No results for "${searchQuery}"`
+                : `No ${statusFilter} distributors found`}
+            </p>
+            <button
+              onClick={() => { setStatusFilter('all'); setSearchQuery(''); }}
+              style={{ background: 'none', border: 'none',
+                color: '#4ade80', cursor: 'pointer',
+                fontSize: 12, textDecoration: 'underline' }}
+            >
+              Clear all filters
+            </button>
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            {/* ── TABLE ────────────────────────────────────────────────── */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left text-gray-500 font-medium pb-3 pr-4">
-                      #
-                    </th>
+                  <tr style={{ borderBottom: `1px solid ${T.border}` }}>
+                    <th style={{ textAlign: 'left', color: T.textMuted,
+                      fontWeight: 500, paddingBottom: 10, paddingRight: 16,
+                      fontSize: 12 }}>#</th>
                     {[
                       { label: 'Name',      field: 'distributor_name' },
                       { label: 'Territory', field: 'territory' },
@@ -510,99 +760,131 @@ function DashboardPage() {
                       { label: 'Outlets',   field: 'new_outlet_additions' },
                       { label: 'Coverage',  field: 'coverage_metrics' },
                     ].map(col => (
-                      <th key={col.field}
+                      <th
+                        key={col.field}
                         onClick={() => handleSort(col.field)}
-                        className="text-left text-gray-500 font-medium pb-3 pr-4
-                                   cursor-pointer hover:text-green-800
-                                   select-none transition-colors duration-150"
+                        style={{
+                          textAlign:   'left',
+                          color:       sortField === col.field
+                            ? '#4ade80' : T.textMuted,
+                          fontWeight:  500,
+                          paddingBottom: 10,
+                          paddingRight:  16,
+                          cursor:      'pointer',
+                          fontSize:    12,
+                          userSelect:  'none',
+                          whiteSpace:  'nowrap',
+                        }}
                       >
-                        <span className="flex items-center gap-1">
-                          {col.label}
-                          {sortField === col.field ? (
-                            <span className="text-green-700 font-bold">
-                              {sortOrder === 'asc' ? '↑' : '↓'}
-                            </span>
-                          ) : (
-                            <span className="text-gray-300">↕</span>
-                          )}
-                        </span>
+                        {col.label}{' '}
+                        {sortField === col.field
+                          ? (sortOrder === 'asc' ? '↑' : '↓')
+                          : <span style={{ color: 'rgba(255,255,255,0.15)' }}>↕</span>}
                       </th>
                     ))}
-                    <th className="text-left text-gray-500 font-medium pb-3 pr-4">
-                      Status
-                    </th>
-                    <th className="text-left text-gray-500 font-medium pb-3">
+                    <th style={{ textAlign: 'left', color: T.textMuted,
+                      fontWeight: 500, paddingBottom: 10,
+                      paddingRight: 16, fontSize: 12 }}>Status</th>
+                    <th style={{ textAlign: 'left', color: T.textMuted,
+                      fontWeight: 500, paddingBottom: 10, fontSize: 12 }}>
                       Alerts
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {/* ── Use paginatedDistributors not filteredDistributors ── */}
                   {paginatedDistributors.map((d, index) => (
                     <motion.tr
                       key={d.id}
                       onClick={() => navigate(`/distributor/${d.id}`)}
-                      className="border-b border-gray-50 cursor-pointer group"
-                      initial={{ opacity: 0, x: -20 }}
+                      initial={{ opacity: 0, x: -16 }}
                       animate={{ opacity: 1, x: 0 }}
-                      transition={{ duration: 0.3, delay: 0.1 + index * 0.05 }}
-                      whileHover={{ backgroundColor: "#f0fdf4" }}
-                      style={{ position: "relative" }}
+                      transition={{ duration: 0.3, delay: 0.05 * index }}
+                      style={{ borderBottom: `1px solid ${T.border}`,
+                        cursor: 'pointer' }}
+                      // 📝 NOTE: Row hover = subtle green glow background
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = 'rgba(22,163,74,0.06)';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
                     >
-                      {/* Row number shows GLOBAL index not page index */}
-                      <td className="py-3 pr-4 text-gray-400">
+                      <td style={{ padding: '12px 16px 12px 0',
+                        color: T.textFaint, fontSize: 12 }}>
                         {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                       </td>
-                      <td className="py-3 pr-4">
-                        <span className="font-medium text-green-800
-                                         group-hover:underline">
+                      <td style={{ padding: '12px 16px 12px 0' }}>
+                        <span style={{ color: '#4ade80', fontWeight: 600 }}>
                           {d.distributor_name}
                         </span>
                       </td>
-                      <td className="py-3 pr-4 text-gray-600">{d.territory}</td>
-                      <td className="py-3 pr-4 text-gray-600">
+                      <td style={{ padding: '12px 16px 12px 0',
+                        color: T.textMuted }}>{d.territory}</td>
+                      <td style={{ padding: '12px 16px 12px 0',
+                        color: T.textMuted }}>
                         {d.monthly_offtake?.toLocaleString()}
                       </td>
-                      <td className="py-3 pr-4 text-gray-600">
+                      <td style={{ padding: '12px 16px 12px 0',
+                        color: T.textMuted }}>
                         {d.new_outlet_additions ?? 0}
                       </td>
-                      <td className="py-3 pr-4 text-gray-600">
+                      <td style={{ padding: '12px 16px 12px 0',
+                        color: T.textMuted }}>
                         {d.coverage_metrics ?? 0}%
                       </td>
-                      <td className="py-3 pr-4">
-                        <span className={`px-2 py-1 rounded-full text-xs
-                                          font-medium ${
-                          d.status === "active"
-                            ? "bg-green-100 text-green-700"
-                            : d.status === "inactive"
-                            ? "bg-red-100 text-red-600"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}>
+                      <td style={{ padding: '12px 16px 12px 0' }}>
+                        {/* 📝 NOTE: Status badge colours match dark theme */}
+                        <span style={{
+                          padding:      '3px 10px',
+                          borderRadius: 20,
+                          fontSize:     11,
+                          fontWeight:   600,
+                          background:
+                            d.status === 'active'
+                              ? 'rgba(74,222,128,0.12)'
+                              : d.status === 'inactive'
+                              ? 'rgba(239,68,68,0.12)'
+                              : 'rgba(245,158,11,0.12)',
+                          color:
+                            d.status === 'active'   ? '#4ade80'
+                            : d.status === 'inactive' ? '#f87171'
+                            : '#fbbf24',
+                        }}>
                           {d.status}
                         </span>
                       </td>
-                      <td className="py-3">
-                        <div className="flex gap-1 flex-wrap">
+                      <td style={{ padding: '12px 0 12px 0' }}>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                           {(parseFloat(d.coverage_metrics) || 0) < 70 && (
-                            <span className="px-2 py-0.5 bg-red-100 text-red-600
-                                             rounded-full text-xs font-medium">
-                              ⚠️ Low Coverage
-                            </span>
+                            <span style={{
+                              padding:      '2px 8px',
+                              borderRadius: 20,
+                              fontSize:     10,
+                              fontWeight:   600,
+                              background:   'rgba(239,68,68,0.12)',
+                              color:        '#f87171',
+                            }}>⚠️ Low Coverage</span>
                           )}
                           {(d.monthly_offtake || 0) < 300 && (
-                            <span className="px-2 py-0.5 bg-yellow-100
-                                             text-yellow-700 rounded-full
-                                             text-xs font-medium">
-                              📉 Low Offtake
-                            </span>
+                            <span style={{
+                              padding:      '2px 8px',
+                              borderRadius: 20,
+                              fontSize:     10,
+                              fontWeight:   600,
+                              background:   'rgba(245,158,11,0.12)',
+                              color:        '#fbbf24',
+                            }}>📉 Low Offtake</span>
                           )}
                           {(parseFloat(d.coverage_metrics) || 0) >= 70 &&
                            (d.monthly_offtake || 0) >= 300 && (
-                            <span className="px-2 py-0.5 bg-green-100
-                                             text-green-600 rounded-full
-                                             text-xs font-medium">
-                              ✅ Good
-                            </span>
+                            <span style={{
+                              padding:      '2px 8px',
+                              borderRadius: 20,
+                              fontSize:     10,
+                              fontWeight:   600,
+                              background:   'rgba(74,222,128,0.12)',
+                              color:        '#4ade80',
+                            }}>✅ Good</span>
                           )}
                         </div>
                       </td>
@@ -612,83 +894,96 @@ function DashboardPage() {
               </table>
             </div>
 
-            {/* ── Pagination Controls ───────────────────────── */}
+            {/* ── PAGINATION ──────────────────────────────────────────── */}
+            {/* 📝 NOTE: Only shown when there are multiple pages */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-6
-                              pt-4 border-t border-gray-100">
-
-                {/* Record count info */}
-                <p className="text-xs text-gray-400">
+              <div style={{
+                display:        'flex',
+                alignItems:     'center',
+                justifyContent: 'space-between',
+                marginTop:      20,
+                paddingTop:     16,
+                borderTop:      `1px solid ${T.border}`,
+              }}>
+                <p style={{ fontSize: 11, color: T.textFaint }}>
                   Showing{' '}
-                  <span className="font-medium text-gray-600">
+                  <span style={{ color: T.textMuted, fontWeight: 600 }}>
                     {((currentPage - 1) * ITEMS_PER_PAGE) + 1}
                   </span>
                   {' '}to{' '}
-                  <span className="font-medium text-gray-600">
-                    {Math.min(
-                      currentPage * ITEMS_PER_PAGE,
-                      filteredDistributors.length
-                    )}
+                  <span style={{ color: T.textMuted, fontWeight: 600 }}>
+                    {Math.min(currentPage * ITEMS_PER_PAGE,
+                      filteredDistributors.length)}
                   </span>
                   {' '}of{' '}
-                  <span className="font-medium text-gray-600">
+                  <span style={{ color: T.textMuted, fontWeight: 600 }}>
                     {filteredDistributors.length}
                   </span>
                   {' '}records
                 </p>
 
-                {/* Page buttons */}
-                <div className="flex items-center gap-2">
-
-                  {/* Previous */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {/* Previous button */}
                   <motion.button
-                    onClick={() => setCurrentPage(prev => prev - 1)}
+                    onClick={() => setCurrentPage(p => p - 1)}
                     disabled={currentPage === 1}
                     whileHover={{ scale: currentPage === 1 ? 1 : 1.05 }}
                     whileTap={{ scale: currentPage === 1 ? 1 : 0.95 }}
-                    className="px-3 py-1.5 rounded-xl text-xs font-semibold
-                               border border-gray-200 transition-all
-                               disabled:opacity-40 disabled:cursor-not-allowed
-                               hover:bg-green-50 hover:border-green-300
-                               hover:text-green-800"
-                  >
-                    ← Previous
-                  </motion.button>
+                    style={{
+                      padding:      '5px 10px',
+                      borderRadius: 8,
+                      fontSize:     11,
+                      fontWeight:   600,
+                      cursor:       currentPage === 1 ? 'not-allowed' : 'pointer',
+                      opacity:      currentPage === 1 ? 0.35 : 1,
+                      background:   'rgba(255,255,255,0.04)',
+                      border:       `1px solid ${T.border}`,
+                      color:        T.textMuted,
+                    }}
+                  >← Previous</motion.button>
 
-                  {/* Page numbers */}
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .map(page => (
-                      <motion.button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className={`w-8 h-8 rounded-xl text-xs font-semibold
-                                    transition-all ${
-                          currentPage === page
-                            ? 'bg-green-800 text-white shadow-md'
-                            : 'border border-gray-200 text-gray-500 hover:bg-green-50 hover:border-green-300 hover:text-green-800'
-                        }`}
-                      >
-                        {page}
-                      </motion.button>
-                    ))}
+                  {/* Page number buttons */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <motion.button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      style={{
+                        width:        30, height: 30,
+                        borderRadius: 8,
+                        fontSize:     11,
+                        fontWeight:   600,
+                        cursor:       'pointer',
+                        background:   currentPage === page
+                          ? T.green : 'rgba(255,255,255,0.04)',
+                        color:        currentPage === page
+                          ? '#fff' : T.textMuted,
+                        border:       `1px solid ${currentPage === page
+                          ? T.green : T.border}`,
+                      }}
+                    >{page}</motion.button>
+                  ))}
 
-                  {/* Next */}
+                  {/* Next button */}
                   <motion.button
-                    onClick={() => setCurrentPage(prev => prev + 1)}
+                    onClick={() => setCurrentPage(p => p + 1)}
                     disabled={currentPage === totalPages}
                     whileHover={{ scale: currentPage === totalPages ? 1 : 1.05 }}
                     whileTap={{ scale: currentPage === totalPages ? 1 : 0.95 }}
-                    className="px-3 py-1.5 rounded-xl text-xs font-semibold
-                               border border-gray-200 transition-all
-                               disabled:opacity-40 disabled:cursor-not-allowed
-                               hover:bg-green-50 hover:border-green-300
-                               hover:text-green-800"
-                  >
-                    Next →
-                  </motion.button>
-
+                    style={{
+                      padding:      '5px 10px',
+                      borderRadius: 8,
+                      fontSize:     11,
+                      fontWeight:   600,
+                      cursor:       currentPage === totalPages
+                        ? 'not-allowed' : 'pointer',
+                      opacity:      currentPage === totalPages ? 0.35 : 1,
+                      background:   'rgba(255,255,255,0.04)',
+                      border:       `1px solid ${T.border}`,
+                      color:        T.textMuted,
+                    }}
+                  >Next →</motion.button>
                 </div>
               </div>
             )}

@@ -1,21 +1,40 @@
+// 📝 NOTE: ReportsPage.js — Redesigned to match dark glassmorphism theme
+// 📝 NOTE: ALL logic unchanged — count-up, CSV export, charts, animations
+// 📝 NOTE: Only colors, backgrounds, borders updated to dark theme
+
 import API_BASE from '../config';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, LineChart, Line,
-  Legend
+  Tooltip, ResponsiveContainer, LineChart, Line, Legend
 } from 'recharts';
 
-// ============================================================
-// 📝 NOTE: COUNT-UP HOOK (same as Dashboard + Detail)
-// Animates a number from 0 → target with easeOut curve.
-// Only works for numbers — strings like "87%" are handled separately.
-// ============================================================
+// ─── STYLE TOKENS ────────────────────────────────────────────────────────────
+// 📝 NOTE: Same token system used across all redesigned pages
+const T = {
+  bg:         '#0b1a0d',
+  card:       'rgba(255,255,255,0.04)',
+  border:     'rgba(255,255,255,0.09)',
+  text:       '#f8fafc',
+  textMuted:  'rgba(248,250,252,0.45)',
+  textFaint:  'rgba(248,250,252,0.22)',
+  green:      '#16a34a',
+  greenGlow:  'rgba(22,163,74,0.15)',
+  amber:      '#f59e0b',
+  amberGlow:  'rgba(245,158,11,0.15)',
+  blue:       '#378ADD',
+  blueGlow:   'rgba(55,138,221,0.15)',
+  purple:     '#a855f7',
+  purpleGlow: 'rgba(168,85,247,0.15)',
+};
+
+// ─── COUNT UP HOOK (UNCHANGED) ───────────────────────────────────────────────
+// 📝 NOTE: Animates numbers from 0 → target with easeOut curve
 function useCountUp(target, duration = 1200) {
-  const [count, setCount] = useState(0);
-  const startTime = useRef(null);
-  const frameRef = useRef(null);
+  const [count, setCount]   = useState(0);
+  const startTime           = useRef(null);
+  const frameRef            = useRef(null);
 
   useEffect(() => {
     const numTarget = parseFloat(target);
@@ -25,61 +44,58 @@ function useCountUp(target, duration = 1200) {
     const animate = (timestamp) => {
       if (!startTime.current) startTime.current = timestamp;
       const progress = Math.min((timestamp - startTime.current) / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const easeOut  = 1 - Math.pow(1 - progress, 3);
       setCount(parseFloat((easeOut * numTarget).toFixed(1)));
       if (progress < 1) frameRef.current = requestAnimationFrame(animate);
       else setCount(numTarget);
     };
 
     startTime.current = null;
-    frameRef.current = requestAnimationFrame(animate);
+    frameRef.current  = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frameRef.current);
   }, [target, duration]);
 
   return count;
 }
 
-// ============================================================
-// 📝 NOTE: SKELETON REPORTS PAGE
-// Shown while data is loading. Mirrors the real layout exactly
-// so the page doesn't "jump" when real data arrives.
-// ============================================================
+// ─── SKELETON LOADER ─────────────────────────────────────────────────────────
+// 📝 NOTE: Dark themed skeleton — shown while API data loads
 function SkeletonReports() {
+  const skBox = (w, h) => ({
+    height: h, width: w,
+    background: 'rgba(255,255,255,0.07)',
+    borderRadius: 6, marginBottom: 8,
+  });
   return (
-    <div className="p-8 animate-pulse">
-      {/* Header skeleton */}
-      <div className="flex items-center justify-between mb-8">
+    <div style={{ padding: 32, background: T.bg, minHeight: '100vh' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:32 }}>
         <div>
-          <div className="h-8 w-52 bg-gray-200 rounded-lg mb-2" />
-          <div className="h-4 w-72 bg-gray-100 rounded" />
+          <div style={skBox(200,28)} />
+          <div style={skBox(280,14)} />
         </div>
-        <div className="h-11 w-32 bg-gray-200 rounded-xl" />
+        <div style={skBox(120,40)} />
       </div>
-      {/* 4 summary card skeletons */}
-      <div className="grid grid-cols-4 gap-5 mb-8">
-        {Array(4).fill(0).map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl p-5 border border-gray-100 h-24">
-            <div className="h-3 w-24 bg-gray-100 rounded mb-3" />
-            <div className="h-8 w-16 bg-gray-200 rounded" />
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:20, marginBottom:28 }}>
+        {Array(4).fill(0).map((_,i) => (
+          <div key={i} style={{ background:T.card, border:`1px solid ${T.border}`,
+            borderRadius:16, padding:20, height:96 }}>
+            <div style={skBox(90,12)} /><div style={skBox(60,28)} />
           </div>
         ))}
       </div>
-      {/* Top performer skeleton */}
-      <div className="h-20 bg-gray-200 rounded-2xl mb-8" />
-      {/* Chart skeletons */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 h-64" />
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 h-64" />
+      <div style={{ background:T.card, border:`1px solid ${T.border}`,
+        borderRadius:16, height:80, marginBottom:28 }} />
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:24, marginBottom:28 }}>
+        <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:16, height:280 }} />
+        <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:16, height:280 }} />
       </div>
-      {/* Table skeleton */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-100">
-        <div className="h-5 w-40 bg-gray-200 rounded mb-4" />
-        {Array(3).fill(0).map((_, i) => (
-          <div key={i} className="flex gap-6 mb-3">
-            <div className="h-4 w-8 bg-gray-100 rounded" />
-            <div className="h-4 w-28 bg-gray-200 rounded" />
-            <div className="h-4 w-24 bg-gray-100 rounded" />
-            <div className="h-4 w-16 bg-gray-100 rounded" />
+      <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:16, padding:24 }}>
+        <div style={skBox(160,18)} />
+        {Array(3).fill(0).map((_,i) => (
+          <div key={i} style={{ display:'flex', gap:24, marginBottom:12 }}>
+            {[32,112,96,64,48,64].map((w,j) => (
+              <div key={j} style={skBox(w,14)} />
+            ))}
           </div>
         ))}
       </div>
@@ -87,85 +103,92 @@ function SkeletonReports() {
   );
 }
 
-// ============================================================
-// 📝 NOTE: SUMMARY CARD WITH COUNT-UP
-// Each of the 4 cards at the top counts up its number.
-// isDecimal = true for the avgCoverage (shows one decimal place).
-// ============================================================
-function SummaryCard({ label, rawValue, color, icon, delay, suffix = '', isDecimal = false }) {
+// ─── SUMMARY CARD ────────────────────────────────────────────────────────────
+// 📝 NOTE: 4 stat cards at top — each has coloured accent + count-up number
+function SummaryCard({ label, rawValue, accentColor, accentGlow, icon, delay, suffix='', isDecimal=false }) {
   const animated = useCountUp(parseFloat(rawValue) || 0);
-
   const displayValue = isDecimal
     ? animated.toFixed(1) + suffix
     : Math.floor(animated).toLocaleString() + suffix;
 
   return (
     <motion.div
-      className="bg-white rounded-2xl p-5 border border-gray-100 relative overflow-hidden"
-      style={{ boxShadow: "0 4px 20px rgba(27,94,32,0.07)" }}
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, scale: 1.02 }}
-      transition={{ duration: 0.4, delay }}
+      style={{
+        background:   T.card,
+        border:       `1px solid ${T.border}`,
+        borderRadius: 16,
+        padding:      '1.25rem',
+        position:     'relative',
+        overflow:     'hidden',
+        cursor:       'default',
+      }}
+      initial={{ opacity:0, y:30 }}
+      animate={{ opacity:1, y:0  }}
+      whileHover={{ y:-4, scale:1.02 }}
+      transition={{ duration:0.4, delay }}
     >
-      {/* Colored top border */}
-      <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
-        style={{ background: color }} />
-
-      {/* Decorative bg circle */}
-      <div className="absolute -bottom-3 -right-3 w-16 h-16 rounded-full opacity-5"
-        style={{ background: color }} />
-
-      <div className="flex items-center justify-between mb-2 mt-1">
-        <p className="text-gray-500 text-xs font-medium">{label}</p>
-        <span className="text-base font-bold" style={{ color }}>{icon}</span>
+      {/* Coloured top bar */}
+      <div style={{
+        position:'absolute', top:0, left:0, right:0,
+        height:3, background:accentColor,
+        borderRadius:'16px 16px 0 0',
+      }} />
+      {/* Glow circle behind icon */}
+      <div style={{
+        position:'absolute', top:-20, right:-20,
+        width:80, height:80, borderRadius:'50%',
+        background:accentGlow,
+      }} />
+      <div style={{ display:'flex', justifyContent:'space-between',
+        alignItems:'flex-start', marginBottom:10, marginTop:4 }}>
+        <p style={{ color:T.textMuted, fontSize:12, fontWeight:500 }}>{label}</p>
+        <span style={{ fontSize:16, padding:'4px 6px',
+          borderRadius:8, background:accentGlow }}>{icon}</span>
       </div>
-      <p className="text-3xl font-bold" style={{ color }}>
+      {/* 📝 NOTE: animatedValue counts up from 0 on page load */}
+      <p style={{ fontSize:30, fontWeight:700, color:accentColor, margin:0 }}>
         {displayValue}
       </p>
     </motion.div>
   );
 }
 
-// ============================================================
-// 📝 NOTE: ANIMATED TABLE PROGRESS BAR
-// The small coverage bar inside each table row.
-// Uses motion.div with initial width 0 → real width.
-// delay is passed in so bars appear after the row fades in.
-// ============================================================
+// ─── TABLE PROGRESS BAR ───────────────────────────────────────────────────────
+// 📝 NOTE: Animated coverage bar in each table row — dark themed
 function TableProgressBar({ value, delay }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+      <div style={{
+        width:64, height:4, background:'rgba(255,255,255,0.08)',
+        borderRadius:4, overflow:'hidden',
+      }}>
         <motion.div
-          className="h-full bg-blue-500 rounded-full"
-          initial={{ width: 0 }}
-          animate={{ width: `${Math.min(value, 100)}%` }}
-          transition={{ duration: 0.8, delay, ease: "easeOut" }}
+          style={{ height:'100%', background:T.blue, borderRadius:4 }}
+          initial={{ width:0 }}
+          animate={{ width:`${Math.min(value,100)}%` }}
+          transition={{ duration:0.8, delay, ease:'easeOut' }}
         />
       </div>
-      <span className="text-gray-500 text-xs">{value}%</span>
+      <span style={{ fontSize:11, color:T.textMuted }}>{value}%</span>
     </div>
   );
 }
 
-// ============================================================
-// MAIN REPORTS PAGE COMPONENT
-// ============================================================
+// ─── MAIN REPORTS PAGE ────────────────────────────────────────────────────────
 function ReportsPage() {
   const [distributors, setDistributors] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState(null);
+  // 📝 NOTE: exportFlash briefly shows "✓ Exported!" on the button
+  const [exportFlash,  setExportFlash]  = useState(false);
 
-  // 📝 exportFlash: briefly shows a "✓ Exported!" message on the button
-  const [exportFlash, setExportFlash] = useState(false);
-
+  // 📝 NOTE: Fetch all distributors from backend — UNCHANGED
   useEffect(() => {
     const fetchData = async () => {
       try {
-       const response = await fetch(`${API_BASE}/api/distributors`);
-        const data = await response.json();
-        const list = Array.isArray(data) ? data
+        const response = await fetch(`${API_BASE}/api/distributors`);
+        const data     = await response.json();
+        const list     = Array.isArray(data) ? data
           : (Array.isArray(data.data) ? data.data : []);
         setDistributors(list);
       } catch (err) {
@@ -177,47 +200,44 @@ function ReportsPage() {
     fetchData();
   }, []);
 
-  // ── Calculated Stats ──────────────────────────────────────
+  // ─── COMPUTED STATS (UNCHANGED) ────────────────────────────────────────────
   const totalDistributors = distributors.length;
-  const activeCount = distributors.filter(d => d.status === 'active').length;
-  const totalOfftake = distributors.reduce((s, d) => s + (d.monthly_offtake || 0), 0);
-  const avgCoverage = distributors.length
-    ? (distributors.reduce((s, d) => s + (parseFloat(d.coverage_metrics) || 0), 0) / distributors.length).toFixed(1)
+  const activeCount       = distributors.filter(d => d.status === 'active').length;
+  const totalOfftake      = distributors.reduce((s,d) => s + (d.monthly_offtake||0), 0);
+  const avgCoverage       = distributors.length
+    ? (distributors.reduce((s,d) => s+(parseFloat(d.coverage_metrics)||0),0) / distributors.length).toFixed(1)
     : 0;
-  const topPerformer = distributors.find(d => d.performance_ranking === 1);
+  const topPerformer      = distributors.find(d => d.performance_ranking === 1);
 
-  // ── Chart Data ────────────────────────────────────────────
-  const offtakeData = distributors.map(d => ({
-    name: d.distributor_name.split(' ')[0],
+  // ─── CHART DATA (UNCHANGED) ────────────────────────────────────────────────
+  const offtakeData  = distributors.map(d => ({
+    name:    d.distributor_name.split(' ')[0],
     offtake: d.monthly_offtake,
     outlets: d.new_outlet_additions || 0,
   }));
-
   const coverageData = distributors.map(d => ({
-    name: d.distributor_name.split(' ')[0],
+    name:     d.distributor_name.split(' ')[0],
     coverage: parseFloat(d.coverage_metrics) || 0,
   }));
 
-  // ── CSV Export ────────────────────────────────────────────
-  // 📝 After exporting, we flash the button green for 2 seconds
+  // ─── CSV EXPORT (UNCHANGED) ────────────────────────────────────────────────
+  // 📝 NOTE: Creates a CSV file and triggers browser download
   const exportCSV = () => {
-    const headers = ['ID', 'Name', 'Territory', 'Monthly Offtake',
-      'New Outlets', 'Coverage %', 'Ranking', 'Status'];
+    const headers = ['ID','Name','Territory','Monthly Offtake',
+      'New Outlets','Coverage %','Ranking','Status'];
     const rows = distributors.map(d => [
       d.id, d.distributor_name, d.territory, d.monthly_offtake,
-      d.new_outlet_additions || 0, d.coverage_metrics || 0,
-      d.performance_ranking || 'N/A', d.status,
+      d.new_outlet_additions||0, d.coverage_metrics||0,
+      d.performance_ranking||'N/A', d.status,
     ]);
-    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
+    const csv  = [headers,...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type:'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
     a.download = 'arvi-edibles-distributors.csv';
     a.click();
     URL.revokeObjectURL(url);
-
-    // Flash the button
     setExportFlash(true);
     setTimeout(() => setExportFlash(false), 2000);
   };
@@ -226,14 +246,18 @@ function ReportsPage() {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div style={{ padding:32, background:T.bg, minHeight:'100vh' }}>
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center"
+          initial={{ opacity:0, scale:0.95 }}
+          animate={{ opacity:1, scale:1 }}
+          style={{
+            background:'rgba(239,68,68,0.10)',
+            border:'1px solid rgba(239,68,68,0.25)',
+            borderRadius:16, padding:24, textAlign:'center',
+          }}
         >
-          <p className="text-red-600 font-medium">⚠️ {error}</p>
-          <p className="text-gray-400 text-sm mt-1">
+          <p style={{ color:'#f87171', fontWeight:600 }}>⚠️ {error}</p>
+          <p style={{ color:T.textFaint, fontSize:13, marginTop:4 }}>
             Make sure backend is running on port 5000
           </p>
         </motion.div>
@@ -241,59 +265,77 @@ function ReportsPage() {
     );
   }
 
-  return (
-    <div className="p-8 min-h-screen"
-      style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #fafafa 60%)" }}>
+  // Shared dark tooltip style for all charts
+  const tooltipStyle = {
+    backgroundColor: '#1a2e1c',
+    border:          '1px solid rgba(255,255,255,0.12)',
+    borderRadius:    10,
+    fontSize:        12,
+    color:           T.text,
+  };
 
-      {/* ── Page Header ───────────────────────────────────── */}
+  return (
+    // 📝 NOTE: Dark background — matches all other redesigned pages
+    <div style={{ padding:32, minHeight:'100vh', background:T.bg }}>
+
+      {/* ── PAGE HEADER ─────────────────────────────────────────────────── */}
       <motion.div
-        className="flex items-center justify-between mb-8"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        style={{ display:'flex', alignItems:'center',
+          justifyContent:'space-between', marginBottom:28 }}
+        initial={{ opacity:0, y:-20 }}
+        animate={{ opacity:1, y:0 }}
+        transition={{ duration:0.5 }}
       >
         <div>
-          <h2 className="text-3xl font-bold text-gray-800">Reports & Analytics</h2>
-          <p className="text-gray-500 mt-1">
+          <h2 style={{ fontSize:24, fontWeight:700, color:T.text, margin:0 }}>
+            Reports & Analytics
+          </h2>
+          <p style={{ color:T.textMuted, marginTop:4, fontSize:14 }}>
             Performance overview for all distributors
           </p>
+          {/* 📝 NOTE: Golden accent line — brand signature across all pages */}
+          <div style={{
+            width:36, height:2, background:T.amber,
+            borderRadius:2, marginTop:10,
+          }} />
         </div>
 
-        {/* 📝 Export button: turns green + shows checkmark after download */}
+        {/* 📝 NOTE: Export button flashes green after download */}
         <motion.button
           onClick={exportCSV}
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
-          animate={{
-            background: exportFlash
-              ? "linear-gradient(135deg, #166534, #15803d)"
-              : "linear-gradient(135deg, #1B5E20, #2e7d32)",
+          whileHover={{ scale:1.04 }}
+          whileTap={{ scale:0.96 }}
+          style={{
+            display:        'flex',
+            alignItems:     'center',
+            gap:            8,
+            padding:        '10px 18px',
+            borderRadius:   10,
+            border:         `1px solid ${exportFlash
+              ? 'rgba(74,222,128,0.4)'
+              : 'rgba(22,163,74,0.3)'}`,
+            background:     exportFlash
+              ? 'rgba(74,222,128,0.15)'
+              : 'rgba(22,163,74,0.12)',
+            color:          exportFlash ? '#4ade80' : '#4ade80',
+            fontWeight:     600,
+            fontSize:       13,
+            cursor:         'pointer',
           }}
-          transition={{ duration: 0.3 }}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl
-                     text-white font-semibold text-sm"
-          style={{ boxShadow: "0 4px 16px rgba(27,94,32,0.25)" }}
         >
-          {/* AnimatePresence swaps the icon smoothly */}
           <AnimatePresence mode="wait">
             {exportFlash ? (
-              <motion.span
-                key="check"
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center gap-2"
-              >
+              <motion.span key="check"
+                initial={{ opacity:0, scale:0.5 }}
+                animate={{ opacity:1, scale:1 }}
+                exit={{ opacity:0 }}>
                 ✓ Exported!
               </motion.span>
             ) : (
-              <motion.span
-                key="download"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex items-center gap-2"
-              >
+              <motion.span key="download"
+                initial={{ opacity:0 }}
+                animate={{ opacity:1 }}
+                exit={{ opacity:0 }}>
                 ⬇ Export CSV
               </motion.span>
             )}
@@ -301,169 +343,228 @@ function ReportsPage() {
         </motion.button>
       </motion.div>
 
-      {/* ── Summary Cards ─────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-5 mb-8">
+      {/* ── SUMMARY CARDS ───────────────────────────────────────────────── */}
+      {/* 📝 NOTE: 4 cards in a row — each has different accent colour      */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)',
+        gap:20, marginBottom:28 }}>
         <SummaryCard label="Total Distributors" rawValue={totalDistributors}
-          color="#1B5E20" icon="▤" delay={0.1} />
+          accentColor={T.green}  accentGlow={T.greenGlow}  icon="🏪" delay={0.1} />
         <SummaryCard label="Active Distributors" rawValue={activeCount}
-          color="#F9A825" icon="◉" delay={0.2} />
+          accentColor={T.amber}  accentGlow={T.amberGlow}  icon="✅" delay={0.2} />
         <SummaryCard label="Total Offtake" rawValue={totalOfftake}
-          color="#1565C0" icon="◈" delay={0.3} suffix=" " />
+          accentColor={T.blue}   accentGlow={T.blueGlow}   icon="📦" delay={0.3} />
         <SummaryCard label="Avg Coverage" rawValue={avgCoverage}
-          color="#7B1FA2" icon="◎" delay={0.4} suffix="%" isDecimal />
+          accentColor={T.purple} accentGlow={T.purpleGlow} icon="📊" delay={0.4} suffix="%" isDecimal />
       </div>
 
-      {/* ── Top Performer Banner ───────────────────────────── */}
+      {/* ── TOP PERFORMER BANNER ────────────────────────────────────────── */}
+      {/* 📝 NOTE: Only shown when a rank #1 distributor exists in data     */}
       {topPerformer && (
         <motion.div
-          className="rounded-2xl p-5 mb-8 flex items-center gap-4 relative overflow-hidden"
           style={{
-            background: "linear-gradient(135deg, #1B5E20 0%, #2e7d32 100%)",
-            boxShadow: "0 4px 24px rgba(27,94,32,0.2)",
+            borderRadius: 16,
+            padding:      '1.25rem 1.5rem',
+            marginBottom: 28,
+            display:      'flex',
+            alignItems:   'center',
+            gap:          16,
+            position:     'relative',
+            overflow:     'hidden',
+            background:   'linear-gradient(135deg, #14532d 0%, #166534 100%)',
+            border:       '1px solid rgba(74,222,128,0.2)',
           }}
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: 0.45 }}
+          initial={{ opacity:0, x:-30 }}
+          animate={{ opacity:1, x:0  }}
+          transition={{ duration:0.5, delay:0.45 }}
         >
-          {/* Decorative blur circle */}
-          <div className="absolute right-0 top-0 w-40 h-40 rounded-full opacity-10"
-            style={{ background: "#F9A825", filter: "blur(40px)", transform: "translate(20%,-20%)" }} />
+          {/* Decorative amber glow */}
+          <div style={{
+            position:'absolute', right:0, top:0,
+            width:160, height:160, borderRadius:'50%',
+            background:'rgba(245,158,11,0.12)',
+            filter:'blur(40px)',
+            transform:'translate(20%,-20%)',
+          }} />
 
           {/* Pulsing avatar */}
-          <div className="relative flex-shrink-0">
+          <div style={{ position:'relative', flexShrink:0 }}>
             <motion.div
-              className="absolute inset-0 rounded-xl bg-yellow-400 opacity-30"
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              style={{
+                position:'absolute', inset:0, borderRadius:12,
+                background:'rgba(245,158,11,0.3)',
+              }}
+              animate={{ scale:[1,1.2,1] }}
+              transition={{ duration:2, repeat:Infinity, ease:'easeInOut' }}
             />
-            <div className="relative w-12 h-12 bg-yellow-500 rounded-xl flex items-center
-                            justify-center text-green-900 font-bold text-lg z-10">
+            <div style={{
+              position:       'relative',
+              width:          48, height:48,
+              background:     'linear-gradient(135deg,#16a34a,#f59e0b)',
+              borderRadius:   12,
+              display:        'flex',
+              alignItems:     'center',
+              justifyContent: 'center',
+              color:          '#fff',
+              fontWeight:     700,
+              fontSize:       18,
+              zIndex:         10,
+            }}>
               {topPerformer.distributor_name.charAt(0)}
             </div>
           </div>
 
-          <div className="relative z-10">
-            <p className="text-green-200 text-xs font-medium uppercase tracking-wide">
+          <div style={{ position:'relative', zIndex:10 }}>
+            <p style={{
+              color:'rgba(74,222,128,0.7)', fontSize:11,
+              fontWeight:600, letterSpacing:'1px',
+              textTransform:'uppercase', margin:0,
+            }}>
               🏆 Top Performer — Rank #1
             </p>
-            <p className="text-white font-bold text-lg">
+            <p style={{ color:'#f8fafc', fontWeight:700,
+              fontSize:17, margin:'3px 0' }}>
               {topPerformer.distributor_name}
             </p>
-            <p className="text-green-300 text-sm">
+            <p style={{ color:'rgba(248,250,252,0.55)', fontSize:13, margin:0 }}>
               {topPerformer.territory} · {topPerformer.monthly_offtake?.toLocaleString()} units
             </p>
           </div>
 
-          {/* Animated trophy */}
+          {/* 📝 NOTE: Animated trophy spins gently */}
           <motion.div
-            className="ml-auto text-4xl relative z-10"
-            animate={{ rotate: [-5, 5, -5] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            style={{ marginLeft:'auto', fontSize:32,
+              position:'relative', zIndex:10 }}
+            animate={{ rotate:[-5,5,-5] }}
+            transition={{ duration:2, repeat:Infinity, ease:'easeInOut' }}
           >
             🏆
           </motion.div>
         </motion.div>
       )}
 
-      {/* ── Charts Row ────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
+      {/* ── CHARTS ROW ──────────────────────────────────────────────────── */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)',
+        gap:24, marginBottom:28 }}>
 
+        {/* Bar chart — Offtake vs Outlets */}
         <motion.div
-          className="bg-white rounded-2xl p-6 border border-gray-100"
-          style={{ boxShadow: "0 4px 20px rgba(27,94,32,0.06)" }}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          whileHover={{ scale: 1.01 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
+          style={{ background:T.card, border:`1px solid ${T.border}`,
+            borderRadius:16, padding:24 }}
+          initial={{ opacity:0, y:30 }}
+          animate={{ opacity:1, y:0  }}
+          whileHover={{ scale:1.01 }}
+          transition={{ duration:0.5, delay:0.5 }}
         >
-          <h3 className="text-base font-semibold text-gray-700 mb-1">
+          <h3 style={{ fontSize:14, fontWeight:600,
+            color:T.text, margin:'0 0 4px' }}>
             Monthly Offtake vs New Outlets
           </h3>
-          <p className="text-gray-400 text-xs mb-4">
+          <p style={{ color:T.textFaint, fontSize:11, margin:'0 0 18px' }}>
             Comparing offtake units and new outlet additions
           </p>
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={220}>
             <BarChart data={offtakeData}
-              margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <Tooltip contentStyle={{
-                backgroundColor: 'white', border: '1px solid #e5e7eb',
-                borderRadius: '12px', fontSize: '12px',
-              }} />
-              <Legend />
-              <Bar dataKey="offtake" fill="#1B5E20" radius={[4, 4, 0, 0]}
-                name="Offtake" isAnimationActive animationDuration={1200} />
-              <Bar dataKey="outlets" fill="#F9A825" radius={[4, 4, 0, 0]}
-                name="New Outlets" isAnimationActive animationDuration={1400} />
+              margin={{ top:5, right:10, left:0, bottom:5 }}>
+              <CartesianGrid strokeDasharray="3 3"
+                stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="name" tick={{ fontSize:11, fill:T.textMuted }} />
+              <YAxis tick={{ fontSize:11, fill:T.textMuted }} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend formatter={v => (
+                <span style={{ fontSize:11, color:T.textMuted }}>{v}</span>
+              )} />
+              <Bar dataKey="offtake" fill={T.green}
+                radius={[4,4,0,0]} name="Offtake"
+                isAnimationActive animationDuration={1200} />
+              <Bar dataKey="outlets" fill={T.amber}
+                radius={[4,4,0,0]} name="New Outlets"
+                isAnimationActive animationDuration={1400} />
             </BarChart>
           </ResponsiveContainer>
         </motion.div>
 
+        {/* Line chart — Coverage trend */}
         <motion.div
-          className="bg-white rounded-2xl p-6 border border-gray-100"
-          style={{ boxShadow: "0 4px 20px rgba(27,94,32,0.06)" }}
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          whileHover={{ scale: 1.01 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
+          style={{ background:T.card, border:`1px solid ${T.border}`,
+            borderRadius:16, padding:24 }}
+          initial={{ opacity:0, y:30 }}
+          animate={{ opacity:1, y:0  }}
+          whileHover={{ scale:1.01 }}
+          transition={{ duration:0.5, delay:0.6 }}
         >
-          <h3 className="text-base font-semibold text-gray-700 mb-1">
+          <h3 style={{ fontSize:14, fontWeight:600,
+            color:T.text, margin:'0 0 4px' }}>
             Coverage Metrics Trend
           </h3>
-          <p className="text-gray-400 text-xs mb-4">
+          <p style={{ color:T.textFaint, fontSize:11, margin:'0 0 18px' }}>
             Territory coverage percentage per distributor
           </p>
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={220}>
             <LineChart data={coverageData}
-              margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#9ca3af' }} />
-              <Tooltip contentStyle={{
-                backgroundColor: 'white', border: '1px solid #e5e7eb',
-                borderRadius: '12px', fontSize: '12px',
-              }} />
-              <Legend />
-              <Line type="monotone" dataKey="coverage" stroke="#1565C0"
-                strokeWidth={2.5} dot={{ fill: '#1565C0', r: 5 }}
-                activeDot={{ r: 7 }} name="Coverage %"
+              margin={{ top:5, right:10, left:0, bottom:5 }}>
+              <CartesianGrid strokeDasharray="3 3"
+                stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="name" tick={{ fontSize:11, fill:T.textMuted }} />
+              <YAxis domain={[0,100]} tick={{ fontSize:11, fill:T.textMuted }} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend formatter={v => (
+                <span style={{ fontSize:11, color:T.textMuted }}>{v}</span>
+              )} />
+              <Line type="monotone" dataKey="coverage"
+                stroke={T.blue} strokeWidth={2.5}
+                dot={{ fill:T.blue, r:4 }}
+                activeDot={{ r:7 }} name="Coverage %"
                 isAnimationActive animationDuration={1500} />
             </LineChart>
           </ResponsiveContainer>
         </motion.div>
-
       </div>
 
-      {/* ── Full Data Table ───────────────────────────────── */}
+      {/* ── DETAILED TABLE ──────────────────────────────────────────────── */}
       <motion.div
-        className="bg-white rounded-2xl p-6 border border-gray-100"
-        style={{ boxShadow: "0 4px 20px rgba(27,94,32,0.06)" }}
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.7 }}
+        style={{ background:T.card, border:`1px solid ${T.border}`,
+          borderRadius:16, padding:24 }}
+        initial={{ opacity:0, y:30 }}
+        animate={{ opacity:1, y:0  }}
+        transition={{ duration:0.5, delay:0.7 }}
       >
-        {/* Green→Amber top accent */}
-        <div className="h-0.5 w-full rounded-full mb-5"
-          style={{ background: "linear-gradient(90deg, #1B5E20, #F9A825)" }} />
+        {/* Green-to-amber top accent bar */}
+        <div style={{
+          height:3, borderRadius:2, marginBottom:20,
+          background:'linear-gradient(90deg, #16a34a, #f59e0b)',
+        }} />
 
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold text-gray-700">
+        <div style={{ display:'flex', alignItems:'center',
+          justifyContent:'space-between', marginBottom:16 }}>
+          <h3 style={{ fontSize:14, fontWeight:600,
+            color:T.text, margin:0 }}>
             Detailed Performance Table
           </h3>
-          <span className="text-xs text-gray-400 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+          <span style={{
+            fontSize:11, color:T.textMuted,
+            background:'rgba(255,255,255,0.05)',
+            padding:'3px 10px', borderRadius:20,
+            border:`1px solid ${T.border}`,
+          }}>
             {distributors.length} records
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div style={{ overflowX:'auto' }}>
+          <table style={{ width:'100%', fontSize:13, borderCollapse:'collapse' }}>
             <thead>
-              <tr className="border-b border-gray-100">
-                {['Rank', 'Name', 'Territory', 'Offtake', 'Outlets', 'Coverage', 'Status'].map(h => (
-                  <th key={h}
-                    className="text-left text-gray-400 font-medium pb-3 pr-4 text-xs uppercase tracking-wide">
+              <tr style={{ borderBottom:`1px solid ${T.border}` }}>
+                {['Rank','Name','Territory','Offtake','Outlets','Coverage','Status'].map(h => (
+                  <th key={h} style={{
+                    textAlign:     'left',
+                    color:         T.textFaint,
+                    fontWeight:    500,
+                    paddingBottom: 10,
+                    paddingRight:  16,
+                    fontSize:      11,
+                    letterSpacing: '0.8px',
+                    textTransform: 'uppercase',
+                  }}>
                     {h}
                   </th>
                 ))}
@@ -471,52 +572,77 @@ function ReportsPage() {
             </thead>
             <tbody>
               {distributors
-                .sort((a, b) => (a.performance_ranking || 99) - (b.performance_ranking || 99))
-                .map((d, i) => (
+                .sort((a,b) => (a.performance_ranking||99)-(b.performance_ranking||99))
+                .map((d,i) => (
                   <motion.tr
                     key={d.id}
-                    className="border-b border-gray-50 cursor-default"
-                    initial={{ opacity: 0, x: -12 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    whileHover={{ backgroundColor: "#f0fdf4" }}
-                    transition={{ delay: 0.8 + i * 0.07 }}
+                    style={{ borderBottom:`1px solid ${T.border}`,
+                      cursor:'default' }}
+                    initial={{ opacity:0, x:-12 }}
+                    animate={{ opacity:1, x:0  }}
+                    transition={{ delay:0.8 + i*0.07 }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background='rgba(22,163,74,0.06)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background='transparent';
+                    }}
                   >
-                    <td className="py-3 pr-4">
-                      {/* 📝 Rank #1 gets a gold badge, others just show the number */}
+                    {/* Rank badge */}
+                    <td style={{ padding:'12px 16px 12px 0' }}>
                       {d.performance_ranking === 1 ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5
-                                         bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">
+                        <span style={{
+                          display:'inline-flex', alignItems:'center',
+                          gap:4, padding:'2px 8px',
+                          background:'rgba(245,158,11,0.15)',
+                          color:'#fbbf24', borderRadius:20,
+                          fontSize:11, fontWeight:700,
+                          border:'1px solid rgba(245,158,11,0.3)',
+                        }}>
                           🥇 #1
                         </span>
                       ) : (
-                        <span className="font-bold text-green-800">
-                          #{d.performance_ranking || 'N/A'}
+                        <span style={{ fontWeight:700, color:'#4ade80', fontSize:12 }}>
+                          #{d.performance_ranking||'N/A'}
                         </span>
                       )}
                     </td>
-                    <td className="py-3 pr-4 font-medium text-gray-800">
+                    <td style={{ padding:'12px 16px 12px 0',
+                      fontWeight:600, color:T.text }}>
                       {d.distributor_name}
                     </td>
-                    <td className="py-3 pr-4 text-gray-500">{d.territory}</td>
-                    <td className="py-3 pr-4 font-medium text-gray-700">
+                    <td style={{ padding:'12px 16px 12px 0',
+                      color:T.textMuted }}>
+                      {d.territory}
+                    </td>
+                    <td style={{ padding:'12px 16px 12px 0',
+                      fontWeight:500, color:T.text }}>
                       {d.monthly_offtake?.toLocaleString()}
                     </td>
-                    <td className="py-3 pr-4 text-gray-500">
-                      {d.new_outlet_additions || 0}
+                    <td style={{ padding:'12px 16px 12px 0',
+                      color:T.textMuted }}>
+                      {d.new_outlet_additions||0}
                     </td>
-                    <td className="py-3 pr-4">
-                      {/* 📝 Each bar animates after its row appears (delay staggered) */}
+                    <td style={{ padding:'12px 16px 12px 0' }}>
+                      {/* 📝 NOTE: Animated progress bar per row */}
                       <TableProgressBar
-                        value={d.coverage_metrics || 0}
-                        delay={0.9 + i * 0.07}
+                        value={d.coverage_metrics||0}
+                        delay={0.9 + i*0.07}
                       />
                     </td>
-                    <td className="py-3">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        d.status === 'active'   ? 'bg-green-100 text-green-700'
-                        : d.status === 'inactive' ? 'bg-red-100 text-red-600'
-                        : 'bg-yellow-100 text-yellow-700'
-                      }`}>
+                    <td style={{ padding:'12px 0' }}>
+                      <span style={{
+                        padding:'3px 10px', borderRadius:20,
+                        fontSize:11, fontWeight:600,
+                        background:
+                          d.status==='active'   ? 'rgba(74,222,128,0.12)'
+                          : d.status==='inactive' ? 'rgba(239,68,68,0.12)'
+                          : 'rgba(245,158,11,0.12)',
+                        color:
+                          d.status==='active'   ? '#4ade80'
+                          : d.status==='inactive' ? '#f87171'
+                          : '#fbbf24',
+                      }}>
                         {d.status}
                       </span>
                     </td>
@@ -526,7 +652,6 @@ function ReportsPage() {
           </table>
         </div>
       </motion.div>
-
     </div>
   );
 }

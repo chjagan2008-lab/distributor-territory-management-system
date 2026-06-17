@@ -1,14 +1,37 @@
+// 📝 NOTE: DetailPage.js — Redesigned to match dark glassmorphism theme
+// 📝 NOTE: ALL logic unchanged — delete modal, count-up, stars, coverage bar
+// 📝 NOTE: Only colors, backgrounds, borders updated to dark theme
+
 import API_BASE from '../config';
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, MapPin, TrendingUp,
-         ShoppingBag, Star, Activity, Award } from 'lucide-react';
+import {
+  ArrowLeft, MapPin, TrendingUp,
+  ShoppingBag, Star, Activity, Award
+} from 'lucide-react';
 
+// ─── STYLE TOKENS ────────────────────────────────────────────────────────────
+// 📝 NOTE: Same token system used across all redesigned pages
+const T = {
+  bg:        '#0b1a0d',
+  card:      'rgba(255,255,255,0.04)',
+  border:    'rgba(255,255,255,0.09)',
+  text:      '#f8fafc',
+  textMuted: 'rgba(248,250,252,0.45)',
+  textFaint: 'rgba(248,250,252,0.22)',
+  green:     '#16a34a',
+  amber:     '#f59e0b',
+  blue:      '#378ADD',
+  purple:    '#a855f7',
+};
+
+// ─── COUNT UP HOOK (UNCHANGED) ───────────────────────────────────────────────
+// 📝 NOTE: Animates number from 0 → target with easeOut — same as all pages
 function useCountUp(target, duration = 1200) {
   const [count, setCount] = useState(0);
-  const startTime = useRef(null);
-  const frameRef = useRef(null);
+  const startTime         = useRef(null);
+  const frameRef          = useRef(null);
 
   useEffect(() => {
     if (!target || target === 0) return;
@@ -17,7 +40,7 @@ function useCountUp(target, duration = 1200) {
     const animate = (timestamp) => {
       if (!startTime.current) startTime.current = timestamp;
       const progress = Math.min((timestamp - startTime.current) / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
+      const easeOut  = 1 - Math.pow(1 - progress, 3);
       setCount(Math.floor(easeOut * target));
       if (progress < 1) {
         frameRef.current = requestAnimationFrame(animate);
@@ -27,37 +50,49 @@ function useCountUp(target, duration = 1200) {
     };
 
     startTime.current = null;
-    frameRef.current = requestAnimationFrame(animate);
+    frameRef.current  = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frameRef.current);
   }, [target, duration]);
 
   return count;
 }
 
+// ─── SKELETON LOADER ─────────────────────────────────────────────────────────
+// 📝 NOTE: Dark themed skeleton shown while data loads
 function SkeletonDetail() {
+  const skBox = (w, h) => ({
+    height: h, width: w,
+    background: 'rgba(255,255,255,0.07)',
+    borderRadius: 6, marginBottom: 8,
+  });
   return (
-    <div className="p-8 animate-pulse">
-      <div className="h-5 w-36 bg-gray-200 rounded mb-6" />
-      <div className="rounded-2xl p-8 mb-6 bg-gray-200 h-32" />
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        {Array(4).fill(0).map((_, i) => (
-          <div key={i} className="bg-white rounded-2xl p-6 border border-gray-100">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-gray-100 rounded-xl" />
-              <div className="h-3 w-28 bg-gray-100 rounded" />
+    <div style={{ padding:32, background:T.bg, minHeight:'100vh' }}>
+      <div style={skBox(140,18)} />
+      <div style={{ background:T.card, border:`1px solid ${T.border}`,
+        borderRadius:16, height:120, marginBottom:24 }} />
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)',
+        gap:24, marginBottom:24 }}>
+        {Array(4).fill(0).map((_,i) => (
+          <div key={i} style={{ background:T.card,
+            border:`1px solid ${T.border}`, borderRadius:16, padding:24 }}>
+            <div style={{ display:'flex', gap:12, marginBottom:16 }}>
+              <div style={{ width:40, height:40,
+                background:'rgba(255,255,255,0.07)', borderRadius:10 }} />
+              <div style={skBox(112,12)} />
             </div>
-            <div className="h-10 w-20 bg-gray-200 rounded mb-2" />
-            <div className="h-3 w-24 bg-gray-100 rounded" />
+            <div style={skBox(80,36)} />
+            <div style={skBox(96,12)} />
           </div>
         ))}
       </div>
-      <div className="bg-white rounded-2xl p-6 border border-gray-100">
-        <div className="h-5 w-36 bg-gray-200 rounded mb-4" />
-        <div className="grid grid-cols-2 gap-4">
-          {Array(4).fill(0).map((_, i) => (
+      <div style={{ background:T.card, border:`1px solid ${T.border}`,
+        borderRadius:16, padding:24 }}>
+        <div style={skBox(140,18)} />
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:16 }}>
+          {Array(4).fill(0).map((_,i) => (
             <div key={i}>
-              <div className="h-3 w-16 bg-gray-100 rounded mb-2" />
-              <div className="h-4 w-24 bg-gray-200 rounded" />
+              <div style={skBox(64,10)} />
+              <div style={skBox(96,16)} />
             </div>
           ))}
         </div>
@@ -66,108 +101,149 @@ function SkeletonDetail() {
   );
 }
 
-function StatCard({ icon: Icon, iconBg, iconColor, label, value,
-                    prefix = '', suffix = '', subtext, delay, extra }) {
+// ─── STAT CARD ───────────────────────────────────────────────────────────────
+// 📝 NOTE: Dark glass card with icon, count-up value, subtext, and optional extra
+function StatCard({ icon:Icon, iconBg, iconColor, label, value,
+                    prefix='', suffix='', subtext, delay, extra }) {
   const animatedValue = useCountUp(typeof value === 'number' ? value : 0);
 
   return (
     <motion.div
-      className="rounded-2xl p-6 border border-gray-100 relative overflow-hidden"
       style={{
-        background: "rgba(255,255,255,0.80)",
-        backdropFilter: "blur(10px)",
-        WebkitBackdropFilter: "blur(10px)",
-        boxShadow: "0 4px 24px rgba(27,94,32,0.06)",
+        background:   T.card,
+        border:       `1px solid ${T.border}`,
+        borderRadius: 16,
+        padding:      '1.5rem',
+        position:     'relative',
+        overflow:     'hidden',
       }}
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, scale: 1.01 }}
-      transition={{ duration: 0.4, delay }}
+      initial={{ opacity:0, y:30 }}
+      animate={{ opacity:1, y:0  }}
+      whileHover={{ y:-4, scale:1.01 }}
+      transition={{ duration:0.4, delay }}
     >
-      <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full opacity-5"
-        style={{ background: iconColor }} />
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`w-10 h-10 ${iconBg} rounded-xl flex items-center justify-center`}>
-          <Icon className={`w-5 h-5 ${iconColor}`} />
+      {/* Decorative glow circle behind icon colour */}
+      <div style={{
+        position:'absolute', bottom:-16, right:-16,
+        width:80, height:80, borderRadius:'50%',
+        background:iconBg, opacity:0.4,
+      }} />
+
+      <div style={{ display:'flex', alignItems:'center',
+        gap:12, marginBottom:16 }}>
+        {/* Icon badge */}
+        <div style={{
+          width:40, height:40, borderRadius:10,
+          background:iconBg,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          flexShrink:0,
+        }}>
+          <Icon style={{ width:18, height:18, color:iconColor }} />
         </div>
-        <p className="text-gray-500 text-sm font-medium">{label}</p>
+        <p style={{ color:T.textMuted, fontSize:13, fontWeight:500 }}>
+          {label}
+        </p>
       </div>
-      <p className="text-4xl font-bold"
-        style={{ color: iconColor.replace('text-', '') }}>
+
+      {/* 📝 NOTE: animatedValue counts up from 0 on mount */}
+      <p style={{ fontSize:36, fontWeight:700, color:iconColor, margin:0 }}>
         {prefix}
         {typeof value === 'number' ? animatedValue.toLocaleString() : value}
         {suffix}
       </p>
-      <p className="text-gray-400 text-sm mt-1">{subtext}</p>
+      <p style={{ color:T.textFaint, fontSize:12, marginTop:4 }}>
+        {subtext}
+      </p>
       {extra}
     </motion.div>
   );
 }
 
+// ─── COVERAGE BAR ────────────────────────────────────────────────────────────
+// 📝 NOTE: Animated progress bar for coverage metric — dark themed
 function CoverageBar({ value }) {
   return (
-    <div className="mt-3">
-      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+    <div style={{ marginTop:12 }}>
+      <div style={{
+        height:4, background:'rgba(255,255,255,0.08)',
+        borderRadius:4, overflow:'hidden',
+      }}>
         <motion.div
-          className="h-full rounded-full"
-          style={{ background: "linear-gradient(90deg, #1565C0, #42a5f5)" }}
-          initial={{ width: 0 }}
-          animate={{ width: `${Math.min(value, 100)}%` }}
-          transition={{ duration: 1.2, delay: 0.5, ease: "easeOut" }}
+          style={{
+            height:'100%', borderRadius:4,
+            background:'linear-gradient(90deg, #378ADD, #60a5fa)',
+          }}
+          initial={{ width:0 }}
+          animate={{ width:`${Math.min(value,100)}%` }}
+          transition={{ duration:1.2, delay:0.5, ease:'easeOut' }}
         />
       </div>
-      <p className="text-xs text-gray-400 mt-1">{value}% of territory covered</p>
+      <p style={{ fontSize:11, color:T.textFaint, marginTop:4 }}>
+        {value}% of territory covered
+      </p>
     </div>
   );
 }
 
+// ─── RANKING STARS ───────────────────────────────────────────────────────────
+// 📝 NOTE: Shows 1–5 stars based on rank — higher rank = more stars
+// 📝 NOTE: Stars animate in one by one using staggerChildren
 function RankingStars({ rank }) {
   if (!rank) return null;
   const stars = Math.max(1, 6 - rank);
   return (
-    <motion.div className="flex gap-1 mt-3"
-      initial="hidden" animate="visible"
+    <motion.div
+      style={{ display:'flex', gap:4, marginTop:12 }}
+      initial="hidden"
+      animate="visible"
       variants={{ visible: { transition: {
-        staggerChildren: 0.1, delayChildren: 0.5
-      }}}}>
-      {Array(5).fill(0).map((_, i) => (
-        <motion.div key={i}
+        staggerChildren:0.1, delayChildren:0.5,
+      }}}}
+    >
+      {Array(5).fill(0).map((_,i) => (
+        <motion.div
+          key={i}
           variants={{
-            hidden: { opacity: 0, scale: 0 },
-            visible: { opacity: 1, scale: 1 }
+            hidden:  { opacity:0, scale:0 },
+            visible: { opacity:1, scale:1 },
           }}
-          transition={{ type: "spring", stiffness: 300 }}>
-          <Star className="w-4 h-4"
-            fill={i < stars ? "#9333ea" : "none"}
-            stroke={i < stars ? "#9333ea" : "#d1d5db"} />
+          transition={{ type:'spring', stiffness:300 }}
+        >
+          <Star
+            style={{ width:16, height:16 }}
+            fill={i < stars ? T.purple : 'none'}
+            stroke={i < stars ? T.purple : 'rgba(255,255,255,0.2)'}
+          />
         </motion.div>
       ))}
-      <span className="text-xs text-gray-400 ml-1 self-center">
+      <span style={{ fontSize:11, color:T.textFaint,
+        marginLeft:4, alignSelf:'center' }}>
         Rank #{rank}
       </span>
     </motion.div>
   );
 }
 
+// ─── MAIN DETAIL PAGE ────────────────────────────────────────────────────────
 function DetailPage() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { id }       = useParams();
+  const navigate     = useNavigate();
 
-  const [distributor, setDistributor] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  // ── NEW: Delete state ─────────────────────────────────────
+  const [distributor,     setDistributor]     = useState(null);
+  const [loading,         setLoading]         = useState(true);
+  const [error,           setError]           = useState(null);
+  // 📝 NOTE: Delete modal state — UNCHANGED
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting,        setDeleting]        = useState(false);
 
+  // 📝 NOTE: Fetch distributor by ID from API — UNCHANGED
   useEffect(() => {
     const fetchDistributor = async () => {
       try {
         const response = await fetch(`${API_BASE}/api/distributors`);
-        const data = await response.json();
-        const list = Array.isArray(data) ? data : (data.data || []);
-        const found = list.find(d => d.id === parseInt(id));
+        const data     = await response.json();
+        const list     = Array.isArray(data) ? data : (data.data || []);
+        const found    = list.find(d => d.id === parseInt(id));
         if (!found) setError('Distributor not found');
         else setDistributor(found);
       } catch (err) {
@@ -179,12 +255,12 @@ function DetailPage() {
     fetchDistributor();
   }, [id]);
 
-  // ── NEW: Delete handler ───────────────────────────────────
+  // 📝 NOTE: DELETE handler — calls DELETE API then navigates to dashboard
   const handleDelete = async () => {
     setDeleting(true);
     try {
       const response = await fetch(`${API_BASE}/api/distributors/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
       });
       const data = await response.json();
       if (data.success) {
@@ -203,15 +279,26 @@ function DetailPage() {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div style={{ padding:32, background:T.bg, minHeight:'100vh' }}>
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center"
+          initial={{ opacity:0, scale:0.95 }}
+          animate={{ opacity:1, scale:1 }}
+          style={{
+            background:   'rgba(239,68,68,0.10)',
+            border:       '1px solid rgba(239,68,68,0.25)',
+            borderRadius: 16, padding:24, textAlign:'center',
+          }}
         >
-          <p className="text-red-600 font-medium">⚠️ {error}</p>
-          <button onClick={() => navigate('/dashboard')}
-            className="mt-4 px-4 py-2 bg-green-800 text-white rounded-xl text-sm">
+          <p style={{ color:'#f87171', fontWeight:600 }}>⚠️ {error}</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            style={{
+              marginTop:    16, padding:'8px 20px',
+              background:   T.green, color:'#fff',
+              border:       'none', borderRadius:10,
+              cursor:       'pointer', fontSize:13,
+            }}
+          >
             Back to Dashboard
           </button>
         </motion.div>
@@ -219,68 +306,81 @@ function DetailPage() {
     );
   }
 
+  // 📝 NOTE: Get first 2 initials from distributor name for avatar
   const initials = distributor.distributor_name
-    .split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    .split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
 
-  const statusColors = {
-    active:   { bg: 'bg-green-500',  text: 'text-white',     label: '● Active' },
-    inactive: { bg: 'bg-red-500',    text: 'text-white',     label: '● Inactive' },
-    pending:  { bg: 'bg-yellow-400', text: 'text-gray-900',  label: '● Pending' },
+  // 📝 NOTE: Status badge colours — dark themed versions
+  const statusConfig = {
+    active:   { bg:'rgba(74,222,128,0.15)',  text:'#4ade80',  border:'rgba(74,222,128,0.3)',  label:'● Active'   },
+    inactive: { bg:'rgba(239,68,68,0.15)',   text:'#f87171',  border:'rgba(239,68,68,0.3)',   label:'● Inactive' },
+    pending:  { bg:'rgba(245,158,11,0.15)',  text:'#fbbf24',  border:'rgba(245,158,11,0.3)',  label:'● Pending'  },
   };
-  const statusStyle = statusColors[distributor.status] || statusColors.pending;
+  const statusStyle = statusConfig[distributor.status] || statusConfig.pending;
 
   return (
-    <div className="p-8 min-h-screen"
-      style={{ background: "linear-gradient(135deg, #f0fdf4 0%, #fafafa 60%)" }}>
+    // 📝 NOTE: Dark background — matches all other redesigned pages
+    <div style={{ padding:32, minHeight:'100vh', background:T.bg }}>
 
-      {/* ── Top Bar: Back + Edit + Delete ─────────────────── */}
-      <div className="flex items-center justify-between mb-6">
+      {/* ── TOP BAR — Back + Edit + Delete ──────────────────────────────── */}
+      <div style={{ display:'flex', alignItems:'center',
+        justifyContent:'space-between', marginBottom:24 }}>
 
+        {/* Back button */}
         <motion.button
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-gray-500
-                     hover:text-green-800 transition-colors
-                     font-medium text-sm group"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3 }}
-          whileHover={{ x: -4 }}
+          style={{
+            display:    'flex', alignItems:'center', gap:8,
+            color:      T.textMuted, fontSize:13, fontWeight:500,
+            background: 'none', border:'none', cursor:'pointer',
+          }}
+          initial={{ opacity:0, x:-20 }}
+          animate={{ opacity:1, x:0   }}
+          transition={{ duration:0.3 }}
+          whileHover={{ x:-4 }}
+          onMouseEnter={e => e.currentTarget.style.color='#4ade80'}
+          onMouseLeave={e => e.currentTarget.style.color=T.textMuted}
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft style={{ width:16, height:16 }} />
           Back to Dashboard
         </motion.button>
 
         {/* Edit + Delete buttons */}
-        <motion.div className="flex gap-3"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.3 }}
+        <motion.div
+          style={{ display:'flex', gap:10 }}
+          initial={{ opacity:0, x:20 }}
+          animate={{ opacity:1, x:0  }}
+          transition={{ duration:0.3 }}
         >
-          {/* Edit */}
+          {/* 📝 NOTE: Edit navigates to the edit page for this distributor */}
           <motion.button
             onClick={() => navigate(`/distributor/${id}/edit`)}
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl
-                       text-white text-sm font-semibold"
+            whileHover={{ scale:1.04 }}
+            whileTap={{  scale:0.96  }}
             style={{
-              background: "linear-gradient(135deg, #1565C0, #1976d2)",
-              boxShadow: "0 4px 12px rgba(21,101,192,0.3)"
+              display:      'flex', alignItems:'center', gap:6,
+              padding:      '8px 16px', borderRadius:10,
+              background:   'rgba(55,138,221,0.15)',
+              border:       '1px solid rgba(55,138,221,0.35)',
+              color:        '#60a5fa', fontSize:13,
+              fontWeight:   600, cursor:'pointer',
             }}
           >
             ✏️ Edit
           </motion.button>
 
-          {/* Delete */}
+          {/* 📝 NOTE: Delete opens confirmation modal */}
           <motion.button
             onClick={() => setShowDeleteModal(true)}
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.96 }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl
-                       text-white text-sm font-semibold"
+            whileHover={{ scale:1.04 }}
+            whileTap={{  scale:0.96  }}
             style={{
-              background: "linear-gradient(135deg, #c62828, #d32f2f)",
-              boxShadow: "0 4px 12px rgba(198,40,40,0.3)"
+              display:    'flex', alignItems:'center', gap:6,
+              padding:    '8px 16px', borderRadius:10,
+              background: 'rgba(239,68,68,0.15)',
+              border:     '1px solid rgba(239,68,68,0.35)',
+              color:      '#f87171', fontSize:13,
+              fontWeight: 600, cursor:'pointer',
             }}
           >
             🗑️ Delete
@@ -288,58 +388,91 @@ function DetailPage() {
         </motion.div>
       </div>
 
-      {/* ── Delete Confirmation Modal ──────────────────────── */}
+      {/* ── DELETE CONFIRMATION MODAL ────────────────────────────────────────
+          📝 NOTE: Fixed overlay + centred modal card
+          📝 NOTE: Uses normal-flow min-height wrapper (no position:fixed issues) */}
       {showDeleteModal && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.5)" }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          style={{
+            position:       'fixed', inset:0, zIndex:50,
+            display:        'flex', alignItems:'center',
+            justifyContent: 'center',
+            background:     'rgba(0,0,0,0.65)',
+          }}
+          initial={{ opacity:0 }}
+          animate={{ opacity:1 }}
         >
           <motion.div
-            className="bg-white rounded-2xl p-8 max-w-sm w-full mx-4"
-            style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 300 }}
+            style={{
+              background:   '#0f2415',
+              border:       '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 20,
+              padding:      '2rem',
+              maxWidth:     360,
+              width:        '100%',
+              margin:       '0 1rem',
+              boxShadow:    '0 24px 60px rgba(0,0,0,0.5)',
+            }}
+            initial={{ scale:0.8, opacity:0 }}
+            animate={{ scale:1,   opacity:1 }}
+            transition={{ type:'spring', stiffness:300 }}
           >
-            <div className="text-center">
-              <div className="text-5xl mb-4">🗑️</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">
+            <div style={{ textAlign:'center' }}>
+              <div style={{ fontSize:48, marginBottom:16 }}>🗑️</div>
+              <h3 style={{ fontSize:18, fontWeight:700,
+                color:T.text, margin:'0 0 8px' }}>
                 Delete Distributor?
               </h3>
-              <p className="text-gray-500 text-sm mb-6">
+              <p style={{ color:T.textMuted, fontSize:13,
+                margin:'0 0 24px', lineHeight:1.6 }}>
                 Are you sure you want to delete{' '}
-                <strong>{distributor.distributor_name}</strong>?
+                <strong style={{ color:T.text }}>
+                  {distributor.distributor_name}
+                </strong>?
                 This cannot be undone!
               </p>
-              <div className="flex gap-3">
+              <div style={{ display:'flex', gap:10 }}>
+                {/* Cancel */}
                 <button
                   onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 py-3 border border-gray-200 rounded-xl
-                             text-gray-600 font-semibold hover:bg-gray-50
-                             transition-colors"
+                  style={{
+                    flex:1, padding:'10px',
+                    background:'rgba(255,255,255,0.05)',
+                    border:`1px solid ${T.border}`,
+                    borderRadius:10, color:T.textMuted,
+                    fontWeight:600, cursor:'pointer', fontSize:13,
+                  }}
                 >
                   Cancel
                 </button>
+                {/* Confirm delete */}
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="flex-1 py-3 bg-red-600 text-white rounded-xl
-                             font-semibold hover:bg-red-700 transition-colors
-                             disabled:opacity-60 flex items-center
-                             justify-center gap-2"
+                  style={{
+                    flex:1, padding:'10px',
+                    background:'rgba(239,68,68,0.2)',
+                    border:'1px solid rgba(239,68,68,0.4)',
+                    borderRadius:10, color:'#f87171',
+                    fontWeight:600, cursor:deleting?'not-allowed':'pointer',
+                    fontSize:13, opacity:deleting?0.6:1,
+                    display:'flex', alignItems:'center',
+                    justifyContent:'center', gap:6,
+                  }}
                 >
                   {deleting ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white
-                                      border-t-transparent rounded-full
-                                      animate-spin"/>
+                      {/* 📝 NOTE: Spinning border = loading indicator */}
+                      <div style={{
+                        width:14, height:14,
+                        border:'2px solid #f87171',
+                        borderTopColor:'transparent',
+                        borderRadius:'50%',
+                        animation:'spin 0.8s linear infinite',
+                      }} />
                       Deleting...
                     </>
-                  ) : (
-                    'Yes, Delete!'
-                  )}
+                  ) : 'Yes, Delete!'}
                 </button>
               </div>
             </div>
@@ -347,137 +480,227 @@ function DetailPage() {
         </motion.div>
       )}
 
-      {/* ── Hero Card ─────────────────────────────────────── */}
+      {/* ── HERO CARD ────────────────────────────────────────────────────── */}
+      {/* 📝 NOTE: Green gradient header with distributor name + territory   */}
       <motion.div
-        className="rounded-2xl p-8 mb-6 relative overflow-hidden"
         style={{
-          background: "linear-gradient(135deg, #1B5E20 0%, #2e7d32 60%, #1a5e35 100%)",
-          boxShadow: "0 8px 40px rgba(27,94,32,0.25)",
+          borderRadius: 16,
+          padding:      '2rem',
+          marginBottom: 24,
+          position:     'relative',
+          overflow:     'hidden',
+          background:   'linear-gradient(135deg, #14532d 0%, #166534 60%, #15803d 100%)',
+          border:       '1px solid rgba(74,222,128,0.15)',
+          boxShadow:    '0 8px 32px rgba(22,163,74,0.2)',
         }}
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
+        initial={{ opacity:0, y:30 }}
+        animate={{ opacity:1, y:0  }}
+        transition={{ duration:0.5, delay:0.1 }}
       >
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full opacity-10"
-          style={{ background: "#F9A825", filter: "blur(60px)",
-                   transform: "translate(30%, -30%)" }} />
-        <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full opacity-10"
-          style={{ background: "#ffffff", filter: "blur(40px)",
-                   transform: "translate(-20%, 30%)" }} />
+        {/* Decorative amber glow */}
+        <div style={{
+          position:'absolute', top:0, right:0,
+          width:200, height:200, borderRadius:'50%',
+          background:'rgba(245,158,11,0.12)', filter:'blur(50px)',
+          transform:'translate(30%,-30%)',
+        }} />
+        <div style={{
+          position:'absolute', bottom:0, left:0,
+          width:160, height:160, borderRadius:'50%',
+          background:'rgba(255,255,255,0.05)', filter:'blur(30px)',
+          transform:'translate(-20%,30%)',
+        }} />
 
-        <div className="relative flex items-center gap-6">
-          <div className="relative flex-shrink-0">
+        <div style={{ position:'relative', display:'flex',
+          alignItems:'center', gap:24 }}>
+
+          {/* Pulsing avatar */}
+          <div style={{ position:'relative', flexShrink:0 }}>
             <motion.div
-              className="absolute inset-0 rounded-2xl"
-              style={{ background: "#F9A825", opacity: 0.3 }}
-              animate={{ scale: [1, 1.15, 1] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+              style={{
+                position:'absolute', inset:0, borderRadius:16,
+                background:'rgba(245,158,11,0.3)',
+              }}
+              animate={{ scale:[1,1.15,1] }}
+              transition={{ duration:2.5, repeat:Infinity, ease:'easeInOut' }}
             />
-            <div className="relative w-20 h-20 bg-yellow-500 rounded-2xl
-                            flex items-center justify-center text-green-900
-                            font-bold text-2xl z-10"
-              style={{ boxShadow: "0 4px 16px rgba(249,168,37,0.4)" }}>
+            {/* 📝 NOTE: Green-to-amber gradient avatar with initials */}
+            <div style={{
+              position:       'relative',
+              width:72, height:72,
+              background:     'linear-gradient(135deg,#16a34a,#f59e0b)',
+              borderRadius:   16,
+              display:        'flex',
+              alignItems:     'center',
+              justifyContent: 'center',
+              color:          '#fff',
+              fontWeight:     700,
+              fontSize:       24,
+              zIndex:         10,
+              boxShadow:      '0 4px 16px rgba(245,158,11,0.35)',
+            }}>
               {initials}
             </div>
           </div>
 
-          <div className="flex-1">
-            <motion.h2 className="text-3xl font-bold text-white"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}>
+          <div style={{ flex:1 }}>
+            <motion.h2
+              style={{ fontSize:26, fontWeight:700,
+                color:'#f8fafc', margin:0 }}
+              initial={{ opacity:0, y:10 }}
+              animate={{ opacity:1, y:0  }}
+              transition={{ delay:0.3 }}
+            >
               {distributor.distributor_name}
             </motion.h2>
             <motion.p
-              className="text-green-200 mt-1.5 flex items-center gap-2 text-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}>
-              <MapPin className="w-4 h-4 text-yellow-400" />
+              style={{ color:'rgba(74,222,128,0.7)', marginTop:6,
+                display:'flex', alignItems:'center', gap:6, fontSize:13 }}
+              initial={{ opacity:0 }}
+              animate={{ opacity:1 }}
+              transition={{ delay:0.4 }}
+            >
+              <MapPin style={{ width:14, height:14, color:T.amber }} />
               {distributor.territory}
             </motion.p>
           </div>
 
+          {/* Status badge */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, type: "spring", stiffness: 200 }}>
-            <span className={`px-4 py-2 rounded-full text-sm font-bold
-                             ${statusStyle.bg} ${statusStyle.text}`}
-              style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.2)" }}>
+            initial={{ opacity:0, scale:0.8 }}
+            animate={{ opacity:1, scale:1   }}
+            transition={{ delay:0.5, type:'spring', stiffness:200 }}
+          >
+            <span style={{
+              padding:      '6px 16px',
+              borderRadius: 20,
+              fontSize:     12,
+              fontWeight:   700,
+              background:   statusStyle.bg,
+              color:        statusStyle.text,
+              border:       `1px solid ${statusStyle.border}`,
+            }}>
               {statusStyle.label.toUpperCase()}
             </span>
           </motion.div>
         </div>
       </motion.div>
 
-      {/* ── Stats Grid ────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-6 mb-6">
-        <StatCard icon={ShoppingBag} iconBg="bg-green-50"
-          iconColor="text-green-700" label="Monthly Offtake"
-          value={distributor.monthly_offtake} suffix=" units"
-          subtext="Units dispatched this month" delay={0.2} />
+      {/* ── STATS GRID ───────────────────────────────────────────────────── */}
+      {/* 📝 NOTE: 2x2 grid of stat cards — each has icon + count-up value  */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)',
+        gap:24, marginBottom:24 }}>
 
-        <StatCard icon={TrendingUp} iconBg="bg-yellow-50"
-          iconColor="text-yellow-600" label="New Outlet Additions"
+        <StatCard
+          icon={ShoppingBag}
+          iconBg="rgba(22,163,74,0.12)"
+          iconColor={T.green}
+          label="Monthly Offtake"
+          value={distributor.monthly_offtake}
+          suffix=" units"
+          subtext="Units dispatched this month"
+          delay={0.2}
+        />
+        <StatCard
+          icon={TrendingUp}
+          iconBg="rgba(245,158,11,0.12)"
+          iconColor={T.amber}
+          label="New Outlet Additions"
           value={distributor.new_outlet_additions ?? 0}
-          subtext="New outlets added this period" delay={0.3} />
-
-        <StatCard icon={Activity} iconBg="bg-blue-50"
-          iconColor="text-blue-600" label="Coverage Metrics"
-          value={distributor.coverage_metrics ?? 0} suffix="%"
-          subtext="Territory coverage" delay={0.4}
-          extra={<CoverageBar value={distributor.coverage_metrics ?? 0} />} />
-
-        <StatCard icon={Award} iconBg="bg-purple-50"
-          iconColor="text-purple-600" label="Performance Ranking"
+          subtext="New outlets added this period"
+          delay={0.3}
+        />
+        <StatCard
+          icon={Activity}
+          iconBg="rgba(55,138,221,0.12)"
+          iconColor={T.blue}
+          label="Coverage Metrics"
+          value={distributor.coverage_metrics ?? 0}
+          suffix="%"
+          subtext="Territory coverage"
+          delay={0.4}
+          // 📝 NOTE: extra = animated progress bar rendered inside the card
+          extra={<CoverageBar value={distributor.coverage_metrics ?? 0} />}
+        />
+        <StatCard
+          icon={Award}
+          iconBg="rgba(168,85,247,0.12)"
+          iconColor={T.purple}
+          label="Performance Ranking"
           value={distributor.performance_ranking ?? null}
-          prefix="#" subtext="Overall ranking" delay={0.5}
-          extra={<RankingStars rank={distributor.performance_ranking} />} />
+          prefix="#"
+          subtext="Overall ranking"
+          delay={0.5}
+          // 📝 NOTE: extra = animated star rating based on rank
+          extra={<RankingStars rank={distributor.performance_ranking} />}
+        />
       </div>
 
-      {/* ── Record Info Card ──────────────────────────────── */}
+      {/* ── RECORD INFO CARD ─────────────────────────────────────────────── */}
+      {/* 📝 NOTE: Shows ID, status, created date, updated date             */}
       <motion.div
-        className="bg-white rounded-2xl p-6 border border-gray-100"
-        style={{ boxShadow: "0 4px 24px rgba(27,94,32,0.06)" }}
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.6 }}
+        style={{
+          background:   T.card,
+          border:       `1px solid ${T.border}`,
+          borderRadius: 16,
+          padding:      24,
+        }}
+        initial={{ opacity:0, y:30 }}
+        animate={{ opacity:1, y:0  }}
+        transition={{ duration:0.4, delay:0.6 }}
       >
-        <div className="h-0.5 w-full rounded-full mb-5"
-          style={{ background: "linear-gradient(90deg, #1B5E20, #F9A825)" }} />
+        {/* Green-to-amber accent bar */}
+        <div style={{
+          height:3, borderRadius:2, marginBottom:20,
+          background:'linear-gradient(90deg, #16a34a, #f59e0b)',
+        }} />
 
-        <h3 className="text-lg font-semibold text-gray-700 mb-4
-                       flex items-center gap-2">
+        <h3 style={{ fontSize:14, fontWeight:600,
+          color:T.text, margin:'0 0 16px',
+          display:'flex', alignItems:'center', gap:8 }}>
           📋 Record Information
         </h3>
 
-        <div className="grid grid-cols-2 gap-5 text-sm">
+        <div style={{ display:'grid',
+          gridTemplateColumns:'repeat(2,1fr)', gap:20 }}>
           {[
-            { label: "Record ID",    value: `#${distributor.id}` },
-            { label: "Status",
+            { label:'Record ID',
+              value:`#${distributor.id}` },
+            { label:'Status',
               value: distributor.status?.charAt(0).toUpperCase()
                    + distributor.status?.slice(1) },
-            { label: "Created At",
+            { label:'Created At',
               value: new Date(distributor.created_at).toLocaleDateString(
-                'en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) },
-            { label: "Last Updated",
+                'en-IN', { day:'numeric', month:'long', year:'numeric' }) },
+            { label:'Last Updated',
               value: new Date(distributor.updated_at).toLocaleDateString(
-                'en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) },
-          ].map((item, i) => (
-            <motion.div key={item.label}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.7 + i * 0.07 }}>
-              <p className="text-gray-400 text-xs uppercase tracking-wide mb-1">
+                'en-IN', { day:'numeric', month:'long', year:'numeric' }) },
+          ].map((item,i) => (
+            <motion.div
+              key={item.label}
+              initial={{ opacity:0, x:-10 }}
+              animate={{ opacity:1, x:0   }}
+              transition={{ delay:0.7 + i*0.07 }}
+            >
+              <p style={{
+                color:         T.textFaint,
+                fontSize:      10,
+                textTransform: 'uppercase',
+                letterSpacing: '0.8px',
+                marginBottom:  4,
+              }}>
                 {item.label}
               </p>
-              <p className="font-semibold text-gray-700">{item.value}</p>
+              <p style={{ fontWeight:600, color:T.text, fontSize:14 }}>
+                {item.value}
+              </p>
             </motion.div>
           ))}
         </div>
       </motion.div>
 
+      {/* 📝 NOTE: CSS keyframe for delete button spinner — injected inline */}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
