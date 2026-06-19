@@ -45,7 +45,7 @@ function StatusDropdown({ value, onChange }) {
     if (!open && wrapRef.current) {
       const rect = wrapRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      const DROPDOWN_HEIGHT_ESTIMATE = 150;
+      const DROPDOWN_HEIGHT_ESTIMATE = 220; // 📝 NOTE: generous margin so it reliably flips before clipping
       setOpenUpward(spaceBelow < DROPDOWN_HEIGHT_ESTIMATE);
     }
     setOpen(o => !o);
@@ -91,6 +91,8 @@ function StatusDropdown({ value, onChange }) {
               border:'1px solid rgba(255,255,255,0.12)',
               borderRadius:10,
               overflow:'hidden',
+              maxHeight: 200,          // 📝 NOTE: safety cap so list never exceeds this height
+              overflowY: 'auto',       // 📝 NOTE: scrolls internally if it ever would overflow
               zIndex:20,
               boxShadow:'0 8px 24px rgba(0,0,0,0.45)',
             }}
