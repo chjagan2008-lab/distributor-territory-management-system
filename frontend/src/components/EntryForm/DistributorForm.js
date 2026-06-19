@@ -46,6 +46,9 @@ const STATUS_OPTIONS = [
 
 function StatusDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
+  // 📝 NOTE: openUpward = true when there isn't enough space below the field
+  // 📝 NOTE: Prevents the dropdown list getting clipped by the viewport/window edge
+  const [openUpward, setOpenUpward] = useState(false);
   const wrapRef = useRef(null);
   const selected = STATUS_OPTIONS.find(o => o.value === value) || STATUS_OPTIONS[0];
 
@@ -58,12 +61,24 @@ function StatusDropdown({ value, onChange }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // 📝 NOTE: Before opening, measure space below the field vs space above
+  // 📝 NOTE: Dropdown list height ≈ 3 options × ~40px = ~130px, use 150px as safe estimate
+  const handleToggle = () => {
+    if (!open && wrapRef.current) {
+      const rect = wrapRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const DROPDOWN_HEIGHT_ESTIMATE = 150;
+      setOpenUpward(spaceBelow < DROPDOWN_HEIGHT_ESTIMATE);
+    }
+    setOpen(o => !o);
+  };
+
   return (
     <div ref={wrapRef} style={{ position:'relative' }}>
       {/* Closed box — looks identical to other inputs */}
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={handleToggle}
         style={{
           ...inputStyle,
           display:'flex', alignItems:'center', justifyContent:'space-between',
@@ -86,12 +101,17 @@ function StatusDropdown({ value, onChange }) {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity:0, y:-6, scale:0.98 }}
+            initial={{ opacity:0, y: openUpward ? 6 : -6, scale:0.98 }}
             animate={{ opacity:1, y:0, scale:1 }}
-            exit={{ opacity:0, y:-6, scale:0.98 }}
+            exit={{ opacity:0, y: openUpward ? 6 : -6, scale:0.98 }}
             transition={{ duration:0.15 }}
             style={{
-              position:'absolute', top:'calc(100% + 6px)', left:0, right:0,
+              position:'absolute',
+              // 📝 NOTE: Opens downward by default, flips above the field when near bottom edge
+              ...(openUpward
+                ? { bottom:'calc(100% + 6px)' }
+                : { top:'calc(100% + 6px)' }),
+              left:0, right:0,
               background:'#0f2412',
               border:'1px solid rgba(255,255,255,0.12)',
               borderRadius:10,

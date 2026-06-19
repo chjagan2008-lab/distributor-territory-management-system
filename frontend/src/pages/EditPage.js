@@ -26,6 +26,8 @@ const STATUS_OPTIONS = [
 
 function StatusDropdown({ value, onChange }) {
   const [open, setOpen] = useState(false);
+  // 📝 NOTE: openUpward = true when there isn't enough space below the field
+  const [openUpward, setOpenUpward] = useState(false);
   const wrapRef = useRef(null);
   const selected = STATUS_OPTIONS.find(o => o.value === value) || STATUS_OPTIONS[0];
 
@@ -37,11 +39,23 @@ function StatusDropdown({ value, onChange }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // 📝 NOTE: Measure space below the field before opening — flips dropdown
+  // 📝 NOTE: upward if not enough room, so options never get clipped off-screen
+  const handleToggle = () => {
+    if (!open && wrapRef.current) {
+      const rect = wrapRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const DROPDOWN_HEIGHT_ESTIMATE = 150;
+      setOpenUpward(spaceBelow < DROPDOWN_HEIGHT_ESTIMATE);
+    }
+    setOpen(o => !o);
+  };
+
   return (
     <div ref={wrapRef} style={{ position:'relative' }}>
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={handleToggle}
         style={{
           ...inputStyle,
           display:'flex', alignItems:'center', justifyContent:'space-between',
@@ -63,12 +77,16 @@ function StatusDropdown({ value, onChange }) {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity:0, y:-6, scale:0.98 }}
+            initial={{ opacity:0, y: openUpward ? 6 : -6, scale:0.98 }}
             animate={{ opacity:1, y:0, scale:1 }}
-            exit={{ opacity:0, y:-6, scale:0.98 }}
+            exit={{ opacity:0, y: openUpward ? 6 : -6, scale:0.98 }}
             transition={{ duration:0.15 }}
             style={{
-              position:'absolute', top:'calc(100% + 6px)', left:0, right:0,
+              position:'absolute',
+              ...(openUpward
+                ? { bottom:'calc(100% + 6px)' }
+                : { top:'calc(100% + 6px)' }),
+              left:0, right:0,
               background:'#0f2412',
               border:'1px solid rgba(255,255,255,0.12)',
               borderRadius:10,
