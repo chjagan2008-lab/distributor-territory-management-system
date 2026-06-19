@@ -1,12 +1,12 @@
-// 📝 NOTE: EditPage.js — Mobile responsive version
-// 📝 NOTE: Key fix: repeat(2,1fr) → auto-fit minmax for all form rows
-// 📝 NOTE: Also: padding clamp, responsive font sizes
+// 📝 NOTE: EditPage.js — Custom dark-themed Status dropdown
+// 📝 NOTE: Same fix as DistributorForm.js — replaces native <select>
+// 📝 NOTE: ALL other logic — fetching, PUT, navigation — UNCHANGED
 
 import API_BASE from '../config';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Save, Loader, CheckCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, Loader, CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
 
 const T = { bg:'#0b1a0d', card:'rgba(255,255,255,0.04)', border:'rgba(255,255,255,0.09)', inputBg:'rgba(255,255,255,0.06)', inputBorder:'rgba(255,255,255,0.10)', text:'#f8fafc', textMuted:'rgba(248,250,252,0.45)', textFaint:'rgba(248,250,252,0.22)', green:'#16a34a', amber:'#f59e0b' };
 const inputStyle = { width:'100%', padding:'11px 14px', background:T.inputBg, border:`1px solid ${T.inputBorder}`, borderRadius:10, fontSize:13, color:T.text, outline:'none', transition:'all 0.2s' };
@@ -15,6 +15,94 @@ const onBlur=(e)=>{e.target.style.borderColor=T.inputBorder;e.target.style.backg
 
 function FieldLabel({children,required}) {
   return (<label style={{display:'block',fontSize:11,fontWeight:600,color:T.textMuted,letterSpacing:'0.7px',textTransform:'uppercase',marginBottom:6}}>{children}{' '}{required&&<span style={{color:'#4ade80'}}>*</span>}</label>);
+}
+
+// ── CUSTOM STATUS DROPDOWN (same component pattern as DistributorForm) ───────
+const STATUS_OPTIONS = [
+  { value:'active',   label:'Active',   dot:'#4ade80' },
+  { value:'inactive', label:'Inactive', dot:'#f87171' },
+  { value:'pending',  label:'Pending',  dot:'#fbbf24' },
+];
+
+function StatusDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const selected = STATUS_OPTIONS.find(o => o.value === value) || STATUS_OPTIONS[0];
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={wrapRef} style={{ position:'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          ...inputStyle,
+          display:'flex', alignItems:'center', justifyContent:'space-between',
+          cursor:'pointer', textAlign:'left',
+          borderColor: open ? 'rgba(22,163,74,0.65)' : T.inputBorder,
+          background: open ? 'rgba(22,163,74,0.08)' : T.inputBg,
+          boxShadow: open ? '0 0 0 3px rgba(22,163,74,0.15)' : 'none',
+        }}
+      >
+        <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ width:8, height:8, borderRadius:'50%', background:selected.dot, flexShrink:0 }} />
+          {selected.label}
+        </span>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration:0.2 }}>
+          <ChevronDown style={{ width:15, height:15, color:T.textMuted }} />
+        </motion.span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity:0, y:-6, scale:0.98 }}
+            animate={{ opacity:1, y:0, scale:1 }}
+            exit={{ opacity:0, y:-6, scale:0.98 }}
+            transition={{ duration:0.15 }}
+            style={{
+              position:'absolute', top:'calc(100% + 6px)', left:0, right:0,
+              background:'#0f2412',
+              border:'1px solid rgba(255,255,255,0.12)',
+              borderRadius:10,
+              overflow:'hidden',
+              zIndex:20,
+              boxShadow:'0 8px 24px rgba(0,0,0,0.45)',
+            }}
+          >
+            {STATUS_OPTIONS.map(opt => {
+              const isActive = opt.value === value;
+              return (
+                <div
+                  key={opt.value}
+                  onClick={() => { onChange(opt.value); setOpen(false); }}
+                  style={{
+                    display:'flex', alignItems:'center', gap:8,
+                    padding:'10px 14px', fontSize:13, cursor:'pointer',
+                    color: isActive ? '#4ade80' : T.text,
+                    background: isActive ? 'rgba(22,163,74,0.12)' : 'transparent',
+                  }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span style={{ width:8, height:8, borderRadius:'50%', background:opt.dot, flexShrink:0 }} />
+                  {opt.label}
+                  {isActive && <CheckCircle style={{ width:14, height:14, marginLeft:'auto', color:'#4ade80' }} />}
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
 }
 
 function EditPage() {
@@ -39,6 +127,7 @@ function EditPage() {
   },[id]);
 
   const handleChange=(e)=>{const{name,value}=e.target;setFormData(prev=>({...prev,[name]:value}));};
+  const handleStatusChange=(newStatus)=>{setFormData(prev=>({...prev,status:newStatus}));};
 
   const handleSubmit=async(e)=>{
     e.preventDefault(); setSaving(true); setError('');
@@ -105,7 +194,6 @@ function EditPage() {
             </div>
 
             <form onSubmit={handleSubmit}>
-              {/* 📝 NOTE: All grids use auto-fit — stack to 1 col on mobile */}
               <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))',gap:'clamp(12px,3vw,20px)',marginBottom:16}}>
                 <div><FieldLabel required>Distributor Name</FieldLabel><input type="text" name="distributor_name" value={formData.distributor_name} onChange={handleChange} required style={inputStyle} onFocus={onFocus} onBlur={onBlur} /></div>
                 <div><FieldLabel required>Territory</FieldLabel><input type="text" name="territory" value={formData.territory} onChange={handleChange} required style={inputStyle} onFocus={onFocus} onBlur={onBlur} /></div>
@@ -118,14 +206,13 @@ function EditPage() {
                 <div><FieldLabel>Coverage Metrics (%)</FieldLabel><input type="number" name="coverage_metrics" value={formData.coverage_metrics} onChange={handleChange} min="0" max="100" step="0.01" style={inputStyle} onFocus={onFocus} onBlur={onBlur} /></div>
                 <div><FieldLabel>Performance Ranking</FieldLabel><input type="number" name="performance_ranking" value={formData.performance_ranking} onChange={handleChange} min="1" style={inputStyle} onFocus={onFocus} onBlur={onBlur} /></div>
               </div>
-              <div style={{marginBottom:24}}>
+
+              {/* 📝 NOTE: Custom dropdown replaces native <select> here too */}
+              <div style={{marginBottom:24, position:'relative'}}>
                 <FieldLabel>Status</FieldLabel>
-                <select name="status" value={formData.status} onChange={handleChange} style={{...inputStyle,colorScheme:'dark'}} onFocus={onFocus} onBlur={onBlur}>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="pending">Pending</option>
-                </select>
+                <StatusDropdown value={formData.status} onChange={handleStatusChange} />
               </div>
+
               <div style={{display:'flex',gap:10}}>
                 <motion.button type="button" onClick={()=>navigate(`/distributor/${id}`)} whileHover={{scale:1.02}} whileTap={{scale:0.97}}
                   style={{flex:1,padding:'11px',background:'rgba(255,255,255,0.04)',border:`1px solid ${T.border}`,borderRadius:10,color:T.textMuted,fontWeight:600,fontSize:13,cursor:'pointer'}}>

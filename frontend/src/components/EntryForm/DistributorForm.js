@@ -1,11 +1,12 @@
-// 📝 NOTE: DistributorForm.js — Mobile responsive version
-// 📝 NOTE: Key fix: grid-cols-2 → auto-fit minmax so fields stack on mobile
-// 📝 NOTE: ALL form logic, validation, API calls, animations — UNCHANGED
+// 📝 NOTE: DistributorForm.js — Custom dark-themed Status dropdown
+// 📝 NOTE: Replaces native <select> (which forced white OS-styled popup)
+// 📝 NOTE: with a fully custom div-based dropdown — every part dark themed
+// 📝 NOTE: ALL other form logic, validation, API calls — 100% UNCHANGED
 
 import API_BASE from '../../config';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle, AlertCircle, Loader, Plus } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader, Plus, ChevronDown } from 'lucide-react';
 
 const T = {
   card:'rgba(255,255,255,0.04)', border:'rgba(255,255,255,0.09)',
@@ -33,6 +34,100 @@ const inputStyle = { width:'100%', padding:'11px 14px', background:T.inputBg, bo
 const onFocus = (e) => { e.target.style.borderColor='rgba(22,163,74,0.65)'; e.target.style.background='rgba(22,163,74,0.08)'; e.target.style.boxShadow='0 0 0 3px rgba(22,163,74,0.15)'; };
 const onBlur  = (e) => { e.target.style.borderColor=T.inputBorder; e.target.style.background=T.inputBg; e.target.style.boxShadow='none'; };
 
+// ── CUSTOM STATUS DROPDOWN ────────────────────────────────────────────────────
+// 📝 NOTE: Built from <div>s instead of native <select>
+// 📝 NOTE: This gives 100% control over the open dropdown list styling
+// 📝 NOTE: Native <select> popups are drawn by the OS/browser — can't be styled
+const STATUS_OPTIONS = [
+  { value:'active',   label:'Active',   dot:'#4ade80' },
+  { value:'inactive', label:'Inactive', dot:'#f87171' },
+  { value:'pending',  label:'Pending',  dot:'#fbbf24' },
+];
+
+function StatusDropdown({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef(null);
+  const selected = STATUS_OPTIONS.find(o => o.value === value) || STATUS_OPTIONS[0];
+
+  // 📝 NOTE: Close dropdown when clicking anywhere outside it
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={wrapRef} style={{ position:'relative' }}>
+      {/* Closed box — looks identical to other inputs */}
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          ...inputStyle,
+          display:'flex', alignItems:'center', justifyContent:'space-between',
+          cursor:'pointer', textAlign:'left',
+          borderColor: open ? 'rgba(22,163,74,0.65)' : T.inputBorder,
+          background: open ? 'rgba(22,163,74,0.08)' : T.inputBg,
+          boxShadow: open ? '0 0 0 3px rgba(22,163,74,0.15)' : 'none',
+        }}
+      >
+        <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ width:8, height:8, borderRadius:'50%', background:selected.dot, flexShrink:0 }} />
+          {selected.label}
+        </span>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration:0.2 }}>
+          <ChevronDown style={{ width:15, height:15, color:T.textMuted }} />
+        </motion.span>
+      </button>
+
+      {/* Open dropdown list — fully custom, dark themed, no OS styling */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity:0, y:-6, scale:0.98 }}
+            animate={{ opacity:1, y:0, scale:1 }}
+            exit={{ opacity:0, y:-6, scale:0.98 }}
+            transition={{ duration:0.15 }}
+            style={{
+              position:'absolute', top:'calc(100% + 6px)', left:0, right:0,
+              background:'#0f2412',
+              border:'1px solid rgba(255,255,255,0.12)',
+              borderRadius:10,
+              overflow:'hidden',
+              zIndex:20,
+              boxShadow:'0 8px 24px rgba(0,0,0,0.45)',
+            }}
+          >
+            {STATUS_OPTIONS.map(opt => {
+              const isActive = opt.value === value;
+              return (
+                <div
+                  key={opt.value}
+                  onClick={() => { onChange(opt.value); setOpen(false); }}
+                  style={{
+                    display:'flex', alignItems:'center', gap:8,
+                    padding:'10px 14px', fontSize:13, cursor:'pointer',
+                    color: isActive ? '#4ade80' : T.text,
+                    background: isActive ? 'rgba(22,163,74,0.12)' : 'transparent',
+                  }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span style={{ width:8, height:8, borderRadius:'50%', background:opt.dot, flexShrink:0 }} />
+                  {opt.label}
+                  {isActive && <CheckCircle style={{ width:14, height:14, marginLeft:'auto', color:'#4ade80' }} />}
+                </div>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function DistributorForm() {
   const [formData, setFormData] = useState({ distributor_name:'', territory:'', monthly_offtake:'', new_outlet_additions:'', coverage_metrics:'', performance_ranking:'', status:'active' });
   const [loading, setLoading]   = useState(false);
@@ -43,6 +138,7 @@ function DistributorForm() {
   useEffect(() => { if (success) { const t = setTimeout(() => setSuccess(false), 3000); return () => clearTimeout(t); } }, [success]);
 
   const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
+  const handleStatusChange = (newStatus) => { setFormData(prev => ({ ...prev, status: newStatus })); };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true); setError(''); setSuccess(false);
@@ -98,10 +194,6 @@ function DistributorForm() {
 
           <motion.form onSubmit={handleSubmit} variants={formContainerVariants} initial="hidden" animate="visible">
 
-            {/* 📝 NOTE: repeat(auto-fit, minmax(200px,1fr)) =
-                1 column on mobile (< 420px)
-                2 columns on tablet/desktop (> 420px)
-                No media queries needed! */}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'clamp(12px,3vw,24px)', marginBottom:16 }}>
               <AnimatedField label="Distributor Name" required>
                 <input type="text" name="distributor_name" value={formData.distributor_name} onChange={handleChange} required placeholder="e.g. Ravi Kumar" style={inputStyle} onFocus={onFocus} onBlur={onBlur} />
@@ -129,13 +221,10 @@ function DistributorForm() {
               </AnimatedField>
             </div>
 
-            <motion.div variants={fieldRowVariants} style={{ marginBottom:24 }}>
+            {/* 📝 NOTE: Custom dropdown replaces native <select> here */}
+            <motion.div variants={fieldRowVariants} style={{ marginBottom:24, position:'relative' }}>
               <label style={{ display:'block', fontSize:11, fontWeight:600, color:T.textMuted, letterSpacing:'0.7px', textTransform:'uppercase', marginBottom:6 }}>Status</label>
-              <select name="status" value={formData.status} onChange={handleChange} style={{ ...inputStyle, colorScheme:'dark' }} onFocus={onFocus} onBlur={onBlur}>
-                <option value="active">✅ Active</option>
-                <option value="inactive">🔴 Inactive</option>
-                <option value="pending">🟡 Pending</option>
-              </select>
+              <StatusDropdown value={formData.status} onChange={handleStatusChange} />
             </motion.div>
 
             <motion.div variants={fieldRowVariants}>
